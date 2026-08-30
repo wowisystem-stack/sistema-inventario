@@ -125,7 +125,7 @@ const AddAsset = () => {
             <Camera size={14} /> Foto del activo
           </div>
           <div style={{ maxWidth: '280px' }}>
-            <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="4 / 3" />
+            <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="4 / 3" facingMode="environment" />
           </div>
         </div>
 

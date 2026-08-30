@@ -6,17 +6,17 @@ interface CameraCaptureProps {
   onCapture: (dataUrl: string) => void;
   onRetake: () => void;
   aspect?: string;
+  facingMode?: "user" | "environment";
 }
 
-export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 / 1" }: CameraCaptureProps) {
+export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 / 1", facingMode = "user" }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) videoRef.current.srcObject = mediaStream;
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       setStream(mediaStream);
       setCameraActive(true);
     } catch (err) {
@@ -24,6 +24,12 @@ export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 
       alert("No se pudo acceder a la cámara.");
     }
   };
+
+  useEffect(() => {
+    if (cameraActive && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [cameraActive, stream]);
 
   const stopCamera = () => {
     if (stream) {
