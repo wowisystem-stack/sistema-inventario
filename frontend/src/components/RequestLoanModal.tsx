@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { X, Package } from 'lucide-react';
 import { requestLoan, type Asset, type Loan } from '../api';
-import { getCurrentUserId } from '../identity';
 
 interface RequestLoanModalProps {
   asset: Asset;
@@ -15,18 +14,13 @@ const RequestLoanModal = ({ asset, onClose, onRequested }: RequestLoanModalProps
   const [error, setError] = useState<string | null>(null);
 
   const accessories = [asset.accessory_1, asset.accessory_2, asset.accessory_3].filter(Boolean);
-  const borrowerId = getCurrentUserId();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!borrowerId) {
-      setError('No se pudo identificar quién solicita. Recargá la página.');
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {
-      const loan = await requestLoan(asset.id, borrowerId, reason);
+      const loan = await requestLoan(asset.id, reason);
       onRequested(loan);
       onClose();
     } catch (err) {

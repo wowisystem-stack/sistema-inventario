@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, ModuleEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum
+from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, ModuleEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum
 
 class UserBase(BaseModel):
     username: str
@@ -26,6 +26,22 @@ class UserUpdate(BaseModel):
     module: Optional[ModuleEnum] = None
     cargo: Optional[str] = None
     role: Optional[RoleEnum] = None
+
+class RegisterRequest(BaseModel):
+    full_name: str
+    document_id: str
+    email: str
+    photo_url: Optional[str] = None
+    digital_signature_url: Optional[str] = None
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    token: str
+    user: User
+    generated_password: Optional[str] = None
 
 class RolePermission(BaseModel):
     id: int
@@ -86,7 +102,8 @@ class LoanBase(BaseModel):
     borrower_id: int
     reason: Optional[str] = None
 
-class LoanCreate(LoanBase):
+class LoanCreate(BaseModel):
+    asset_id: int
     reason: str
 
 class Loan(LoanBase):
@@ -112,7 +129,6 @@ class Loan(LoanBase):
         from_attributes = True
 
 class LoanApproval(BaseModel):
-    approver_id: int
     approved: bool
 
 class CheckoutRequest(BaseModel):
@@ -138,6 +154,36 @@ class Assignment(BaseModel):
     asset: Asset
     user: User
     authorized_by: Optional[User] = None
+
+    class Config:
+        from_attributes = True
+
+class AssetRequestCreate(BaseModel):
+    category_requested: Optional[CategoryEnum] = None
+    description: str
+
+class AssetRequestAssign(BaseModel):
+    asset_id: int
+    notes: Optional[str] = None
+
+class AssetRequestReject(BaseModel):
+    notes: Optional[str] = None
+
+class AssetRequest(BaseModel):
+    id: int
+    requester_id: int
+    module: Optional[ModuleEnum] = None
+    category_requested: Optional[CategoryEnum] = None
+    description: str
+    status: RequestStatusEnum
+    reviewed_by_id: Optional[int] = None
+    resulting_loan_id: Optional[int] = None
+    created_at: datetime
+    reviewed_at: Optional[datetime] = None
+    review_notes: Optional[str] = None
+
+    requester: User
+    reviewed_by: Optional[User] = None
 
     class Config:
         from_attributes = True

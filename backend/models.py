@@ -53,6 +53,11 @@ class LoanStatusEnum(enum.Enum):
     CHECKED_OUT = "checked_out"
     RETURNED = "returned"
 
+class RequestStatusEnum(enum.Enum):
+    PENDING = "pending"
+    ASSIGNED = "assigned"
+    REJECTED = "rejected"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -67,6 +72,8 @@ class User(Base):
 
     module = Column(Enum(ModuleEnum), nullable=True)
     cargo = Column(String, nullable=True, index=True)
+
+    password_hash = Column(String, nullable=True)
 
     loans_borrowed = relationship("Loan", foreign_keys='Loan.borrower_id', back_populates="borrower")
     loans_approved = relationship("Loan", foreign_keys='Loan.approver_id', back_populates="approver")
@@ -165,3 +172,43 @@ class RolePermission(Base):
     id = Column(Integer, primary_key=True, index=True)
     cargo = Column(String, unique=True, index=True)
     allowed_categories = Column(Text)
+
+
+class AuthToken(Base):
+    """Token de sesión emitido en login/registro. Se valida por lookup directo
+    (sin JWT) para mantener el modelo de auth simple y revocable."""
+    __tablename__ = "auth_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+
+    user = relationship("User")
+
+
+class AssetRequest(Base):
+    """Solicitud de un empleado que describe qué necesita (categoría +
+    motivo) sin elegir un activo puntual del catálogo. El encargado/admin la
+    revisa y, si corresponde, la convierte en un Loan asignando un activo
+    disponible concreto."""
+    __tablename__ = "asset_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    requester_id = Column(Integer, ForeignKey("users.id"))
+    module = Column(Enum(ModuleEnum), nullable=True)
+    category_requested = Column(Enum(CategoryEnum), nullable=True)
+    description = Column(Text)
+    status = Column(Enum(RequestStatusEnum), default=RequestStatusEnum.PENDING)
+
+    reviewed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resulting_loan_id = Column(Integer, ForeignKey("loans.id"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    review_notes = Column(Text, nullable=True)
+
+    requester = relationship("User", foreign_keys=[requester_id])
+    reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
+    resulting_loan = relationship("Loan")

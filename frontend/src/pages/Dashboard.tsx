@@ -1,13 +1,108 @@
-import { useState, useEffect } from 'react';
-import { Search, Pencil } from 'lucide-react';
-import { getAssets, getUsers, getRolePermissions, formatCOP, STATUS_LABELS, type Asset, type Category } from '../api';
+import { useState, useEffect, type FormEvent } from 'react';
+import { Search, Pencil, Send } from 'lucide-react';
+import {
+  getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
+  createAssetRequest, getMyAssetRequests,
+  type Asset, type Category, type AssetRequest,
+} from '../api';
 import { useModule } from '../moduleContext';
-import { getCurrentUserId } from '../identity';
+import { getCachedUser } from '../components/LoginGate';
 import AssetEditModal from '../components/AssetEditModal';
 import RequestLoanModal from '../components/RequestLoanModal';
 
-const Dashboard = () => {
+const REQUEST_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendiente', assigned: 'Asignada', rejected: 'Rechazada',
+};
+
+const EmployeeRequestView = () => {
+  const [category, setCategory] = useState<Category | ''>('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [myRequests, setMyRequests] = useState<AssetRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = () => {
+    getMyAssetRequests().then(setMyRequests).catch((err) => setError(err.message)).finally(() => setLoading(false));
+  };
+
+  useEffect(load, []);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await createAssetRequest(category || undefined, description);
+      setDescription('');
+      setCategory('');
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="header">
+        <div>
+          <h1 className="title">Solicitar un Activo</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Contanos qué necesitás y para qué — el encargado revisa tu pedido y te asigna el activo disponible que corresponda.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="glass-panel" style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '520px' }}>
+        <label>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo de activo (opcional)</div>
+          <select className="input-field" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+            <option value="">No estoy seguro / otro</option>
+            {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
+              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>¿Qué necesitás y para qué?</div>
+          <textarea className="input-field" rows={4} required value={description} onChange={(e) => setDescription(e.target.value)} />
+        </label>
+        {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          <Send size={16} /> {submitting ? 'Enviando...' : 'Enviar solicitud'}
+        </button>
+      </form>
+
+      <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px' }}>Mis solicitudes</h2>
+      {loading ? (
+        <p style={{ color: 'var(--text-secondary)' }}>Cargando...</p>
+      ) : myRequests.length === 0 ? (
+        <p style={{ color: 'var(--text-secondary)' }}>Todavía no enviaste ninguna solicitud.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {myRequests.map((r) => (
+            <div key={r.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{r.description}</div>
+              </div>
+              <span className={`badge ${r.status === 'assigned' ? 'badge-available' : r.status === 'rejected' ? 'badge-maintenance' : 'badge-loaned'}`}>
+                {REQUEST_STATUS_LABELS[r.status]}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CatalogView = () => {
   const { module } = useModule();
+  const currentUser = getCachedUser();
+  const canSeeValues = currentUser?.role === 'admin' || currentUser?.role === 'encargado';
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +110,6 @@ const Dashboard = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [requestingAsset, setRequestingAsset] = useState<Asset | null>(null);
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
-  const [allowedCategories, setAllowedCategories] = useState<Set<Category> | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -25,30 +119,11 @@ const Dashboard = () => {
       .finally(() => setLoading(false));
   }, [module]);
 
-  // Un empleado con cargo asignado solo ve las categorías permitidas para ese
-  // cargo (Fase 8). Admin/encargado/salida, o empleados sin cargo aún, ven todo.
-  useEffect(() => {
-    const userId = getCurrentUserId();
-    if (userId === null) return;
-    getUsers().then((users) => {
-      const current = users.find(u => u.id === userId);
-      if (!current || current.role !== 'empleado' || !current.cargo) {
-        setAllowedCategories(null);
-        return;
-      }
-      getRolePermissions().then((perms) => {
-        const match = perms.find(p => p.cargo === current.cargo);
-        setAllowedCategories(match ? new Set(match.allowed_categories.split(',') as Category[]) : null);
-      });
-    });
-  }, []);
-
   const filteredAssets = assets.filter(a =>
-    (a.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)) &&
-    (allowedCategories === null || a.category === null || allowedCategories.has(a.category))
+    a.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   return (
@@ -57,7 +132,7 @@ const Dashboard = () => {
         <div>
           <h1 className="title">Catálogo de Activos</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            {loading ? 'Cargando...' : `${filteredAssets.length} activos ${allowedCategories ? 'visibles para tu cargo' : 'registrados'}`}
+            {loading ? 'Cargando...' : `${filteredAssets.length} activos registrados`}
           </p>
         </div>
       </div>
@@ -110,7 +185,7 @@ const Dashboard = () => {
                 <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Marca/Modelo:</span> {asset.brand_model || '—'}</div>
                 {asset.area && <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Área:</span> {asset.area}</div>}
                 {asset.responsible_name && <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Responsable:</span> {asset.responsible_name}</div>}
-                {(asset.purchase_price || asset.estimated_value) != null && (
+                {canSeeValues && (asset.purchase_price || asset.estimated_value) != null && (
                   <div>
                     <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Valor:</span>{' '}
                     {formatCOP((asset.purchase_price ?? asset.estimated_value) as number)}
@@ -170,6 +245,11 @@ const Dashboard = () => {
       )}
     </div>
   );
+};
+
+const Dashboard = () => {
+  const currentUser = getCachedUser();
+  return currentUser?.role === 'empleado' ? <EmployeeRequestView /> : <CatalogView />;
 };
 
 export default Dashboard;

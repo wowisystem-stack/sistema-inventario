@@ -1,4 +1,5 @@
 import { getPassword } from './auth';
+import { getToken } from './session';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -63,7 +64,10 @@ export interface User {
   id: number;
   username: string;
   full_name: string;
+  email: string | null;
   document_id: string;
+  photo_url: string | null;
+  digital_signature_url: string | null;
   role: Role;
   module: Module | null;
   cargo: string | null;
@@ -106,10 +110,12 @@ export interface VerificationResult {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       'X-App-Password': getPassword(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
   });
@@ -121,6 +127,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const pingAuth = () => request<User[]>('/users/');
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+  generated_password: string | null;
+}
+
+export const registerUser = (payload: {
+  full_name: string;
+  document_id: string;
+  email: string;
+  photo_url?: string;
+  digital_signature_url?: string;
+}) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
+
+export const login = (email: string, password: string) =>
+  request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+
+export const getMe = () => request<User>('/auth/me');
 
 export const getAssets = (module?: Module) =>
   request<Asset[]>(`/assets/${module ? `?module=${module}` : ''}`);
@@ -205,16 +230,16 @@ export const updateUser = (userId: number, update: Partial<{ module: Module; car
 
 export const getRolePermissions = () => request<RolePermission[]>('/role-permissions/');
 
-export const approveLoan = (loanId: number, approverId: number, approved: boolean) =>
+export const approveLoan = (loanId: number, approved: boolean) =>
   request<Loan>(`/loans/${loanId}/approve`, {
     method: 'POST',
-    body: JSON.stringify({ approver_id: approverId, approved }),
+    body: JSON.stringify({ approved }),
   });
 
-export const requestLoan = (assetId: number, borrowerId: number, reason: string) =>
+export const requestLoan = (assetId: number, reason: string) =>
   request<Loan>('/loans/request', {
     method: 'POST',
-    body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason }),
+    body: JSON.stringify({ asset_id: assetId, reason }),
   });
 
 export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string) =>
@@ -253,3 +278,44 @@ export const renewAssignment = (assignmentId: number, durationDays: number) =>
 
 export const revokeAssignment = (assignmentId: number) =>
   request<Assignment>(`/assignments/${assignmentId}/revoke`, { method: 'POST' });
+
+export type AssetRequestStatus = 'pending' | 'assigned' | 'rejected';
+
+export interface AssetRequest {
+  id: number;
+  requester_id: number;
+  module: Module | null;
+  category_requested: Category | null;
+  description: string;
+  status: AssetRequestStatus;
+  reviewed_by_id: number | null;
+  resulting_loan_id: number | null;
+  created_at: string;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  requester: User;
+  reviewed_by: User | null;
+}
+
+export const createAssetRequest = (categoryRequested: Category | undefined, description: string) =>
+  request<AssetRequest>('/asset-requests/', {
+    method: 'POST',
+    body: JSON.stringify({ category_requested: categoryRequested, description }),
+  });
+
+export const getMyAssetRequests = () => request<AssetRequest[]>('/asset-requests/mine');
+
+export const getAssetRequests = (statusFilter?: AssetRequestStatus) =>
+  request<AssetRequest[]>(`/asset-requests/${statusFilter ? `?status_filter=${statusFilter}` : ''}`);
+
+export const assignAssetRequest = (requestId: number, assetId: number, notes?: string) =>
+  request<AssetRequest>(`/asset-requests/${requestId}/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ asset_id: assetId, notes }),
+  });
+
+export const rejectAssetRequest = (requestId: number, notes?: string) =>
+  request<AssetRequest>(`/asset-requests/${requestId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  });

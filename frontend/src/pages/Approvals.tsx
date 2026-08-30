@@ -1,23 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Clock, Package } from 'lucide-react';
-import { getLoans, getUsers, approveLoan, type Loan, type User } from '../api';
+import { getLoans, approveLoan, type Loan } from '../api';
 import { useModule } from '../moduleContext';
+import { getCachedUser } from '../components/LoginGate';
 
 const Approvals = () => {
   const { module } = useModule();
+  const currentUser = getCachedUser();
+  const canApprove = currentUser?.role === 'encargado' || currentUser?.role === 'admin';
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [approver, setApprover] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
-    Promise.all([getLoans(), getUsers()])
-      .then(([loanData, users]) => {
-        setLoans(loanData.filter(l => l.asset.module === module));
-        setApprover(users.find(u => u.role === 'encargado') ?? users[0] ?? null);
-      })
+    getLoans()
+      .then((loanData) => setLoans(loanData.filter(l => l.asset.module === module)))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };
@@ -25,10 +24,9 @@ const Approvals = () => {
   useEffect(load, [module]);
 
   const handleApproval = async (loanId: number, approve: boolean) => {
-    if (!approver) return;
     setProcessingId(loanId);
     try {
-      const updated = await approveLoan(loanId, approver.id, approve);
+      const updated = await approveLoan(loanId, approve);
       setLoans(loans.map(l => (l.id === loanId ? updated : l)));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -57,8 +55,10 @@ const Approvals = () => {
     <div className="animate-fade-in">
       <div className="header">
         <div>
-          <h1 className="title">Aprobaciones Pendientes</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Revise las solicitudes de préstamo enviadas por el personal.</p>
+          <h1 className="title">{canApprove ? 'Aprobaciones Pendientes' : 'Mis Solicitudes'}</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            {canApprove ? 'Revise las solicitudes de préstamo enviadas por el personal.' : 'Seguimiento de tus préstamos solicitados.'}
+          </p>
         </div>
       </div>
 
@@ -104,12 +104,12 @@ const Approvals = () => {
                 )}
               </div>
 
-              {loan.status === 'pending' ? (
+              {loan.status === 'pending' && canApprove ? (
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button
                     className="btn"
                     style={{ background: 'var(--danger-color)', color: 'white' }}
-                    disabled={processingId === loan.id || !approver}
+                    disabled={processingId === loan.id}
                     onClick={() => handleApproval(loan.id, false)}
                   >
                     <X size={18} />
@@ -118,7 +118,7 @@ const Approvals = () => {
                   <button
                     className="btn"
                     style={{ background: 'var(--success-color)', color: 'white' }}
-                    disabled={processingId === loan.id || !approver}
+                    disabled={processingId === loan.id}
                     onClick={() => handleApproval(loan.id, true)}
                   >
                     <Check size={18} />
@@ -128,7 +128,7 @@ const Approvals = () => {
               ) : (
                 <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={18} />
-                  Procesado
+                  {loan.status === 'pending' ? 'Pendiente de revisión' : 'Procesado'}
                 </div>
               )}
             </div>

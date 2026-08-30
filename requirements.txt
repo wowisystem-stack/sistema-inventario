@@ -8,5 +8,6 @@ python-dotenv
 requests
 supabase
 psycopg2-binary
+bcrypt
 # deepface  # Descomentar si se usa reconocimiento facial local
 # pytesseract # Para OCR de cedula

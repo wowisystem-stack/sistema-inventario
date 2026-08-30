@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import models, schemas
 from database import engine, get_db
-from services import qr_generator, biometrics, depreciation
+from services import qr_generator, biometrics, depreciation, auth as auth_service
 
 load_dotenv()
 
@@ -40,18 +40,110 @@ app.add_middleware(
 
 from supabase_client import upload_base64_image
 
+
+def _slugify_username(name: str) -> str:
+    import re, unicodedata
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-zA-Z0-9]+", ".", normalized).strip(".").lower()
+    return slug or "usuario"
+
+
+# --- Endpoints de Autenticación ---
+@app.post("/auth/register", response_model=schemas.AuthResponse)
+def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
+    existing_email = db.query(models.User).filter(models.User.email == payload.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Ese correo ya tiene una cuenta")
+
+    # Vincular con un perfil ya importado (mismo documento) que aún no tenga cuenta.
+    user = db.query(models.User).filter(
+        models.User.document_id == payload.document_id,
+        models.User.password_hash.is_(None),
+    ).first()
+
+    photo_url = payload.photo_url
+    if photo_url and photo_url.startswith("data:image"):
+        uploaded = upload_base64_image(photo_url, "inventory-assets", "users/photos", f"{payload.document_id}_photo")
+        if uploaded:
+            photo_url = uploaded
+
+    signature_url = payload.digital_signature_url
+    if signature_url and signature_url.startswith("data:image"):
+        uploaded = upload_base64_image(signature_url, "inventory-assets", "users/signatures", f"{payload.document_id}_sig")
+        if uploaded:
+            signature_url = uploaded
+
+    generated_password = auth_service.generate_password()
+    password_hash = auth_service.hash_password(generated_password)
+
+    if user:
+        user.full_name = payload.full_name
+        user.email = payload.email
+        user.photo_url = photo_url or user.photo_url
+        user.digital_signature_url = signature_url or user.digital_signature_url
+        user.password_hash = password_hash
+    else:
+        base_username = _slugify_username(payload.full_name)
+        username = base_username
+        suffix = 1
+        while db.query(models.User).filter(models.User.username == username).first():
+            suffix += 1
+            username = f"{base_username}.{suffix}"
+
+        db_doc = db.query(models.User).filter(models.User.document_id == payload.document_id).first()
+        if db_doc:
+            raise HTTPException(status_code=400, detail="Ese documento ya tiene una cuenta registrada")
+
+        user = models.User(
+            username=username,
+            full_name=payload.full_name,
+            document_id=payload.document_id,
+            email=payload.email,
+            photo_url=photo_url,
+            digital_signature_url=signature_url,
+            role=models.RoleEnum.EMPLEADO,
+            password_hash=password_hash,
+        )
+        db.add(user)
+
+    db.commit()
+    db.refresh(user)
+
+    token = auth_service.create_token(db, user)
+    return schemas.AuthResponse(token=token, user=user, generated_password=generated_password)
+
+
+@app.post("/auth/login", response_model=schemas.AuthResponse)
+def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    if not user or not user.password_hash or not auth_service.verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
+
+    token = auth_service.create_token(db, user)
+    return schemas.AuthResponse(token=token, user=user)
+
+
+@app.get("/auth/me", response_model=schemas.User)
+def get_me(current_user: models.User = Depends(auth_service.get_current_user)):
+    return current_user
+
+
+# --- Endpoints de Usuarios ---
 @app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username ya registrado")
-    
-    # Procesar imágenes si vienen en base64
+
     user_dict = user.dict()
     if user_dict.get("photo_url") and user_dict["photo_url"].startswith("data:image"):
         url = upload_base64_image(user_dict["photo_url"], "inventory-assets", "users/photos", f"{user.username}_photo")
         if url: user_dict["photo_url"] = url
-            
+
     if user_dict.get("digital_signature_url") and user_dict["digital_signature_url"].startswith("data:image"):
         url = upload_base64_image(user_dict["digital_signature_url"], "inventory-assets", "users/signatures", f"{user.username}_sig")
         if url: user_dict["digital_signature_url"] = url
@@ -67,7 +159,12 @@ def get_users(db: Session = Depends(get_db)):
     return db.query(models.User).all()
 
 @app.put("/users/{user_id}", response_model=schemas.User)
-def update_user(user_id: int, update: schemas.UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int,
+    update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -113,14 +210,29 @@ def create_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
     return new_asset
 
 @app.get("/assets/", response_model=List[schemas.Asset])
-def get_assets(module: Optional[str] = None, db: Session = Depends(get_db)):
+def get_assets(
+    module: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    if current_user.role == models.RoleEnum.EMPLEADO:
+        raise HTTPException(status_code=403, detail="Los empleados no tienen acceso al catálogo de activos")
+
     query = db.query(models.Asset)
     if module:
         try:
             query = query.filter(models.Asset.module == models.ModuleEnum(module))
         except ValueError:
             raise HTTPException(status_code=400, detail="Módulo inválido")
-    return query.all()
+    assets = query.all()
+
+    if current_user.role not in (models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO):
+        for asset in assets:
+            asset.value = None
+            asset.purchase_price = None
+            asset.estimated_value = None
+
+    return assets
 
 UNUSED_THRESHOLD_DAYS = 180
 
@@ -234,13 +346,23 @@ def verify_asset_status(unique_code: str, db: Session = Depends(get_db)):
 
 # --- Endpoints de Préstamos ---
 @app.get("/loans/", response_model=List[schemas.Loan])
-def get_loans(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
+def get_loans(
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
     query = db.query(models.Loan)
     if status_filter:
         try:
             query = query.filter(models.Loan.status == models.LoanStatusEnum(status_filter))
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de préstamo inválido")
+
+    if current_user.role == models.RoleEnum.EMPLEADO:
+        query = query.filter(models.Loan.borrower_id == current_user.id)
+    elif current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
+        query = query.join(models.Asset).filter(models.Asset.module == current_user.module)
+
     return query.order_by(models.Loan.request_date.desc()).all()
 
 @app.get("/loans/{loan_id}", response_model=schemas.Loan)
@@ -251,15 +373,19 @@ def get_loan(loan_id: int, db: Session = Depends(get_db)):
     return loan
 
 @app.post("/loans/request", response_model=schemas.Loan)
-def request_loan(loan_req: schemas.LoanCreate, db: Session = Depends(get_db)):
+def request_loan(
+    loan_req: schemas.LoanCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
     # Verificar si el activo está disponible
     asset = db.query(models.Asset).filter(models.Asset.id == loan_req.asset_id).first()
     if not asset or asset.status != models.AssetStatusEnum.AVAILABLE:
         raise HTTPException(status_code=400, detail="Activo no disponible para préstamo")
-        
+
     new_loan = models.Loan(
         asset_id=loan_req.asset_id,
-        borrower_id=loan_req.borrower_id,
+        borrower_id=current_user.id,
         reason=loan_req.reason,
         status=models.LoanStatusEnum.PENDING
     )
@@ -269,12 +395,17 @@ def request_loan(loan_req: schemas.LoanCreate, db: Session = Depends(get_db)):
     return new_loan
 
 @app.post("/loans/{loan_id}/approve", response_model=schemas.Loan)
-def approve_loan(loan_id: int, approval: schemas.LoanApproval, db: Session = Depends(get_db)):
+def approve_loan(
+    loan_id: int,
+    approval: schemas.LoanApproval,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
+):
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
     if not loan or loan.status != models.LoanStatusEnum.PENDING:
         raise HTTPException(status_code=400, detail="Préstamo no válido para aprobación")
-        
-    loan.approver_id = approval.approver_id
+
+    loan.approver_id = current_user.id
     loan.approval_date = datetime.utcnow()
     loan.status = models.LoanStatusEnum.APPROVED if approval.approved else models.LoanStatusEnum.REJECTED
     
@@ -402,3 +533,108 @@ def revoke_assignment(assignment_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(assignment)
     return assignment
+
+# --- Endpoints de Solicitudes sin catálogo (el empleado describe qué necesita) ---
+@app.post("/asset-requests/", response_model=schemas.AssetRequest)
+def create_asset_request(
+    payload: schemas.AssetRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    new_request = models.AssetRequest(
+        requester_id=current_user.id,
+        module=current_user.module,
+        category_requested=payload.category_requested,
+        description=payload.description,
+        status=models.RequestStatusEnum.PENDING,
+    )
+    db.add(new_request)
+    db.commit()
+    db.refresh(new_request)
+    return new_request
+
+@app.get("/asset-requests/mine", response_model=List[schemas.AssetRequest])
+def get_my_asset_requests(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    return (
+        db.query(models.AssetRequest)
+        .filter(models.AssetRequest.requester_id == current_user.id)
+        .order_by(models.AssetRequest.created_at.desc())
+        .all()
+    )
+
+@app.get("/asset-requests/", response_model=List[schemas.AssetRequest])
+def get_asset_requests(
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
+):
+    query = db.query(models.AssetRequest)
+    if status_filter:
+        try:
+            query = query.filter(models.AssetRequest.status == models.RequestStatusEnum(status_filter))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Estado de solicitud inválido")
+
+    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
+        query = query.filter(models.AssetRequest.module == current_user.module)
+
+    return query.order_by(models.AssetRequest.created_at.desc()).all()
+
+@app.post("/asset-requests/{request_id}/assign", response_model=schemas.AssetRequest)
+def assign_asset_request(
+    request_id: int,
+    payload: schemas.AssetRequestAssign,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
+):
+    asset_request = db.query(models.AssetRequest).filter(models.AssetRequest.id == request_id).first()
+    if not asset_request or asset_request.status != models.RequestStatusEnum.PENDING:
+        raise HTTPException(status_code=400, detail="Solicitud no válida para asignar")
+
+    asset = db.query(models.Asset).filter(models.Asset.id == payload.asset_id).first()
+    if not asset or asset.status != models.AssetStatusEnum.AVAILABLE:
+        raise HTTPException(status_code=400, detail="Activo no disponible para asignar")
+
+    new_loan = models.Loan(
+        asset_id=asset.id,
+        borrower_id=asset_request.requester_id,
+        approver_id=current_user.id,
+        reason=asset_request.description,
+        status=models.LoanStatusEnum.APPROVED,
+        approval_date=datetime.utcnow(),
+    )
+    db.add(new_loan)
+    db.flush()
+
+    asset_request.status = models.RequestStatusEnum.ASSIGNED
+    asset_request.reviewed_by_id = current_user.id
+    asset_request.reviewed_at = datetime.utcnow()
+    asset_request.review_notes = payload.notes
+    asset_request.resulting_loan_id = new_loan.id
+
+    db.commit()
+    db.refresh(asset_request)
+    return asset_request
+
+@app.post("/asset-requests/{request_id}/reject", response_model=schemas.AssetRequest)
+def reject_asset_request(
+    request_id: int,
+    payload: schemas.AssetRequestReject,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
+):
+    asset_request = db.query(models.AssetRequest).filter(models.AssetRequest.id == request_id).first()
+    if not asset_request or asset_request.status != models.RequestStatusEnum.PENDING:
+        raise HTTPException(status_code=400, detail="Solicitud no válida para rechazar")
+
+    asset_request.status = models.RequestStatusEnum.REJECTED
+    asset_request.reviewed_by_id = current_user.id
+    asset_request.reviewed_at = datetime.utcnow()
+    asset_request.review_notes = payload.notes
+
+    db.commit()
+    db.refresh(asset_request)
+    return asset_request
