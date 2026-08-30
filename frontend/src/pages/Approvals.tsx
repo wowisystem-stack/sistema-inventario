@@ -1,0 +1,142 @@
+import { useState, useEffect } from 'react';
+import { Check, X, Clock, Package } from 'lucide-react';
+import { getLoans, getUsers, approveLoan, type Loan, type User } from '../api';
+import { useModule } from '../moduleContext';
+
+const Approvals = () => {
+  const { module } = useModule();
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [approver, setApprover] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<number | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    Promise.all([getLoans(), getUsers()])
+      .then(([loanData, users]) => {
+        setLoans(loanData.filter(l => l.asset.module === module));
+        setApprover(users.find(u => u.role === 'encargado') ?? users[0] ?? null);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, [module]);
+
+  const handleApproval = async (loanId: number, approve: boolean) => {
+    if (!approver) return;
+    setProcessingId(loanId);
+    try {
+      const updated = await approveLoan(loanId, approver.id, approve);
+      setLoans(loans.map(l => (l.id === loanId ? updated : l)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const statusLabel: Record<string, string> = {
+    pending: 'Pendiente',
+    approved: 'Aprobado',
+    rejected: 'Rechazado',
+    checked_out: 'Entregado',
+    returned: 'Devuelto',
+  };
+
+  const statusBadgeClass: Record<string, string> = {
+    pending: 'badge-maintenance',
+    approved: 'badge-available',
+    rejected: 'badge-loaned',
+    checked_out: 'badge-loaned',
+    returned: 'badge-available',
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="header">
+        <div>
+          <h1 className="title">Aprobaciones Pendientes</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Revise las solicitudes de préstamo enviadas por el personal.</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+          Cargando solicitudes...
+        </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--danger-color)' }}>
+          Error: {error}
+        </div>
+      ) : loans.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+          No hay solicitudes de préstamo registradas.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {loans.map(loan => (
+            <div key={loan.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>
+                    {loan.asset.description} <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 400 }}>({loan.asset.unique_code})</span>
+                  </h3>
+                  <span className={`badge ${statusBadgeClass[loan.status]}`}>
+                    {statusLabel[loan.status]}
+                  </span>
+                </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-primary)' }}>Solicitante:</span> {loan.borrower.full_name} &nbsp;•&nbsp;
+                  <span style={{ color: 'var(--text-primary)' }}> Fecha:</span> {new Date(loan.request_date).toLocaleString('es-CO')}
+                </div>
+                {loan.reason && (
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', borderLeft: '3px solid var(--accent-color)' }}>
+                    <strong>Motivo:</strong> "{loan.reason}"
+                  </div>
+                )}
+                {[loan.asset.accessory_1, loan.asset.accessory_2, loan.asset.accessory_3].filter(Boolean).length > 0 && (
+                  <div style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Package size={14} />
+                    Incluye: {[loan.asset.accessory_1, loan.asset.accessory_2, loan.asset.accessory_3].filter(Boolean).join(', ')}
+                  </div>
+                )}
+              </div>
+
+              {loan.status === 'pending' ? (
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    className="btn"
+                    style={{ background: 'var(--danger-color)', color: 'white' }}
+                    disabled={processingId === loan.id || !approver}
+                    onClick={() => handleApproval(loan.id, false)}
+                  >
+                    <X size={18} />
+                    Rechazar
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ background: 'var(--success-color)', color: 'white' }}
+                    disabled={processingId === loan.id || !approver}
+                    onClick={() => handleApproval(loan.id, true)}
+                  >
+                    <Check size={18} />
+                    Aprobar
+                  </button>
+                </div>
+              ) : (
+                <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={18} />
+                  Procesado
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Approvals;

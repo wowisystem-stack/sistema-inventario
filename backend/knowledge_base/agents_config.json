@@ -1,0 +1,35 @@
+[
+    {
+        "role_id": "OP-01",
+        "name": "Agente Operario",
+        "role": "Operario de Planta",
+        "reports_to": "Jefe de Producción",
+        "daily_processes": [
+            "Hacer el inventario",
+            "Revisar los insumos",
+            "Reportar fallas en la maquinaria"
+        ]
+    },
+    {
+        "role_id": "JP-01",
+        "name": "Agente Jefe Prod",
+        "role": "Jefe de Producción",
+        "reports_to": "Gerente General",
+        "daily_processes": [
+            "Orquestar a los operarios",
+            "Asegurar la cuota mensual",
+            "Solicitar mantenimiento"
+        ]
+    },
+    {
+        "role_id": "QA-01",
+        "name": "Agente Calidad",
+        "role": "Especialista de Calidad",
+        "reports_to": "Gerente General",
+        "daily_processes": [
+            "Hacer auditorías de producto",
+            "Diligenciar formato de calidad",
+            "Detener línea ante defectos"
+        ]
+    }
+]

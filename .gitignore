@@ -1,0 +1,30 @@
+# Entornos y dependencias
+backend/venv/
+frontend/node_modules/
+
+# Variables de entorno / secretos
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Base de datos local
+backend/*.db
+backend/*.db.bak_*
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Vercel
+frontend/.vercel/
+
+# Build output y temporales
+frontend/dist/
+.tmp/
+*.log
+
+# Claude Code local
+.claude/

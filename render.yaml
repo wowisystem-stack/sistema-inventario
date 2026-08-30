@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: inventario-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r ../requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: APPSHEET_APP_ID
+        sync: false
+      - key: APPSHEET_ACCESS_KEY
+        sync: false
+      - key: APPSHEET_ESTUDIO_APP_ID
+        sync: false
+      - key: APPSHEET_ESTUDIO_ACCESS_KEY
+        sync: false

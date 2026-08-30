@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+qrcode
+pillow
+python-multipart
+python-dotenv
+requests
+supabase
+psycopg2-binary
+# deepface  # Descomentar si se usa reconocimiento facial local
+# pytesseract # Para OCR de cedula
