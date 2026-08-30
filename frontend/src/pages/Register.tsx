@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Check, Pencil, Copy } from "lucide-react";
 import { registerUser } from "../api";
 import { setToken } from "../session";
+import CameraCapture from "../components/CameraCapture";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,59 +16,12 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Camera state
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [cameraActive, setCameraActive] = useState(false);
 
   // Signature state
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
-
-  // Initialize camera
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-      setStream(mediaStream);
-      setCameraActive(true);
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      alert("No se pudo acceder a la cámara.");
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setCameraActive(false);
-    }
-  };
-
-  const takePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setPhoto(dataUrl);
-        stopCamera();
-      }
-    }
-  };
-
-  const retakePhoto = () => {
-    setPhoto(null);
-    startCamera();
-  };
 
   // Signature logic
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -121,10 +75,6 @@ export default function Register() {
       setSignature(canvas.toDataURL("image/png"));
     }
   };
-
-  useEffect(() => {
-    return () => stopCamera(); // Cleanup on unmount
-  }, [stream]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,29 +180,7 @@ export default function Register() {
             {/* Foto */}
             <div className="bg-[rgba(255,255,255,0.05)] p-6 rounded-xl border border-[rgba(255,255,255,0.1)]">
               <h3 className="text-xl text-white mb-4 flex items-center"><Camera className="w-5 h-5 mr-2" /> Fotografía</h3>
-              <div className="aspect-square bg-black rounded-lg overflow-hidden flex items-center justify-center relative mb-4">
-                {!photo && !cameraActive && (
-                  <button type="button" onClick={startCamera} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full">
-                    Encender Cámara
-                  </button>
-                )}
-                {!photo && cameraActive && (
-                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                )}
-                {photo && (
-                  <img src={photo} alt="Foto capturada" className="w-full h-full object-cover" />
-                )}
-              </div>
-              {cameraActive && !photo && (
-                <button type="button" onClick={takePhoto} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium">
-                  Capturar Foto
-                </button>
-              )}
-              {photo && (
-                <button type="button" onClick={retakePhoto} className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium">
-                  Tomar otra foto
-                </button>
-              )}
+              <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="1 / 1" />
             </div>
 
             {/* Firma */}

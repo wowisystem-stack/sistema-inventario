@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3 } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 
@@ -20,6 +20,8 @@ const Navbar = () => {
     { path: '/dashboard', label: isEmpleado ? 'Mi Solicitud' : 'Catálogo', icon: Package, show: true },
     { path: '/approvals', label: 'Aprobaciones', icon: ClipboardCheck, show: true },
     { path: '/requests', label: 'Solicitudes', icon: Inbox, show: isEncargadoOrAdmin },
+    { path: '/assets/new', label: 'Nuevo Activo', icon: PlusCircle, show: isEncargadoOrAdmin },
+    { path: '/qr-codes', label: 'Códigos QR', icon: Grid3x3, show: isEncargadoOrAdmin },
     { path: '/scanner', label: 'Control Salida', icon: QrCode, show: !isEmpleado },
     { path: '/unused', label: 'Sin Uso', icon: AlertTriangle, show: isEncargadoOrAdmin },
     { path: '/assignments', label: 'Asignaciones', icon: UserCheck, show: isEncargadoOrAdmin },

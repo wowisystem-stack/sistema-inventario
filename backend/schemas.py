@@ -73,8 +73,22 @@ class AssetBase(BaseModel):
     estimated_value: Optional[float] = None
     value_source: ValueSourceEnum = ValueSourceEnum.DESCONOCIDO
 
-class AssetCreate(AssetBase):
-    pass
+class AssetCreate(BaseModel):
+    unique_code: str
+    description: str
+    brand_model: str
+    photo_url: Optional[str] = None
+    status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
+    module: ModuleEnum = ModuleEnum.ELITE_NUTRICION
+    area: Optional[str] = None
+    responsible_name: Optional[str] = None
+    accessory_1: Optional[str] = None
+    accessory_2: Optional[str] = None
+    accessory_3: Optional[str] = None
+    observations: Optional[str] = None
+    category: Optional[CategoryEnum] = None
+    purchase_price: Optional[float] = None
+    purchase_date: Optional[datetime] = None
 
 class Asset(AssetBase):
     id: int

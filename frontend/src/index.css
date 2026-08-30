@@ -1,33 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Deep Dark Palette */
-  --bg-color: #020617; /* Slate 950 */
-  --bg-gradient-1: rgba(59, 130, 246, 0.15); /* Blue */
-  --bg-gradient-2: rgba(139, 92, 246, 0.1); /* Purple */
+  /* Clean Corporate Light Palette */
+  --bg-color: #f8fafc; /* Slate 50 */
+  --bg-gradient-1: rgba(59, 130, 246, 0.05); /* Very light blue */
+  --bg-gradient-2: rgba(99, 102, 241, 0.03); /* Very light indigo */
   
   /* Liquid Glass (Functional Layer) */
-  --liquid-glass-bg: rgba(15, 23, 42, 0.6);
-  --liquid-glass-blur: 40px;
-  --liquid-glass-border: rgba(255, 255, 255, 0.08);
+  --liquid-glass-bg: rgba(255, 255, 255, 0.7);
+  --liquid-glass-blur: 20px;
+  --liquid-glass-border: rgba(0, 0, 0, 0.06);
 
   /* Content Layer Panels */
-  --surface-color: rgba(30, 41, 59, 0.4); /* Slate 800 */
-  --surface-border: rgba(255, 255, 255, 0.06);
-  --panel-blur: 20px;
+  --surface-color: rgba(255, 255, 255, 0.85); /* Mostly opaque white */
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --panel-blur: 16px;
   
   /* Typography */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a; /* Slate 900 */
+  --text-secondary: #475569; /* Slate 600 */
   
   /* Accents */
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
+  --accent-color: #2563eb; /* Professional Blue */
+  --accent-hover: #1d4ed8;
   
   /* Status */
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
+  --success-color: #059669; /* Emerald 600 */
+  --warning-color: #d97706; /* Amber 600 */
+  --danger-color: #dc2626; /* Red 600 */
 }
 
 * {
@@ -66,14 +66,14 @@ body {
   border: 1px solid var(--surface-border);
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
 }
 
 .glass-panel:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 /* --- Controls & Inputs --- */
@@ -105,21 +105,21 @@ body {
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.02);
   color: var(--text-primary);
   border: 1px solid var(--surface-border);
   backdrop-filter: blur(10px);
 }
 
 .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .input-field {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--surface-border);
   border-radius: 12px;
   color: var(--text-primary);
@@ -130,9 +130,9 @@ body {
 
 .input-field:focus {
   outline: none;
-  background: rgba(15, 23, 42, 0.6);
+  background: #ffffff;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* --- Layout --- */
@@ -153,7 +153,7 @@ body {
   font-size: 2.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

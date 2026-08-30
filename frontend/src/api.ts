@@ -150,6 +150,26 @@ export const getMe = () => request<User>('/auth/me');
 export const getAssets = (module?: Module) =>
   request<Asset[]>(`/assets/${module ? `?module=${module}` : ''}`);
 
+export interface AssetCreateInput {
+  unique_code: string;
+  description: string;
+  brand_model: string;
+  photo_url?: string;
+  module: Module;
+  area?: string;
+  responsible_name?: string;
+  accessory_1?: string;
+  accessory_2?: string;
+  accessory_3?: string;
+  observations?: string;
+  category?: Category;
+  purchase_price?: number;
+  purchase_date?: string;
+}
+
+export const createAsset = (payload: AssetCreateInput) =>
+  request<Asset>('/assets/', { method: 'POST', body: JSON.stringify(payload) });
+
 export interface UnusedAsset {
   id: number;
   unique_code: string;

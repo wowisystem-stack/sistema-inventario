@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import models, schemas
 from database import engine, get_db
 from services import qr_generator, biometrics, depreciation, auth as auth_service
+from services.asset_classifier import classify_asset
 
 load_dotenv()
 
@@ -180,29 +181,44 @@ def get_role_permissions(db: Session = Depends(get_db)):
 
 # --- Endpoints de Activos ---
 @app.post("/assets/", response_model=schemas.Asset)
-def create_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+def create_asset(
+    asset: schemas.AssetCreate,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     db_asset = db.query(models.Asset).filter(models.Asset.unique_code == asset.unique_code).first()
     if db_asset:
         raise HTTPException(status_code=400, detail="Activo ya registrado")
-        
-    # Generar QR
+
+    photo_url = asset.photo_url
+    if photo_url and photo_url.startswith("data:image"):
+        uploaded = upload_base64_image(photo_url, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
+        if uploaded:
+            photo_url = uploaded
+
+    # Generar QR (codifica el unique_code, es lo que lee el Scanner de seguridad)
     qr_base64 = qr_generator.generate_qr_base64(asset.unique_code)
-    
+
+    category = asset.category or classify_asset(asset.description, asset.brand_model)
+
     new_asset = models.Asset(
         unique_code=asset.unique_code,
         description=asset.description,
         brand_model=asset.brand_model,
-        photo_url=asset.photo_url,
+        photo_url=photo_url,
         status=asset.status,
         qr_data=qr_base64,
         module=asset.module,
         area=asset.area,
         responsible_name=asset.responsible_name,
-        value=asset.value,
         accessory_1=asset.accessory_1,
         accessory_2=asset.accessory_2,
         accessory_3=asset.accessory_3,
         observations=asset.observations,
+        category=category,
+        purchase_price=asset.purchase_price,
+        purchase_date=asset.purchase_date,
+        value_source=models.ValueSourceEnum.MANUAL if asset.purchase_price else models.ValueSourceEnum.DESCONOCIDO,
     )
     db.add(new_asset)
     db.commit()
@@ -279,7 +295,12 @@ def get_unused_assets(module: Optional[str] = None, db: Session = Depends(get_db
     return results
 
 @app.put("/assets/{asset_id}", response_model=schemas.Asset)
-def update_asset(asset_id: int, update: schemas.AssetUpdate, db: Session = Depends(get_db)):
+def update_asset(
+    asset_id: int,
+    update: schemas.AssetUpdate,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
@@ -295,7 +316,12 @@ def update_asset(asset_id: int, update: schemas.AssetUpdate, db: Session = Depen
     return asset
 
 @app.post("/assets/{asset_id}/photo", response_model=schemas.Asset)
-async def upload_asset_photo(asset_id: int, photo: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_asset_photo(
+    asset_id: int,
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
@@ -306,7 +332,10 @@ async def upload_asset_photo(asset_id: int, photo: UploadFile = File(...), db: S
     import base64
     photo_bytes = await photo.read()
     b64 = base64.b64encode(photo_bytes).decode()
-    asset.photo_url = f"data:{photo.content_type};base64,{b64}"
+    data_uri = f"data:{photo.content_type};base64,{b64}"
+
+    uploaded_url = upload_base64_image(data_uri, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
+    asset.photo_url = uploaded_url or data_uri  # si Supabase falla, al menos no se pierde la foto
 
     db.commit()
     db.refresh(asset)
