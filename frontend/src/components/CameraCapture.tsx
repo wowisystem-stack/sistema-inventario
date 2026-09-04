@@ -63,7 +63,7 @@ export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 
     <div>
       <div className="bg-black rounded-lg overflow-hidden flex items-center justify-center relative mb-4" style={{ aspectRatio: aspect }}>
         {!photo && !cameraActive && (
-          <button type="button" onClick={startCamera} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full">
+          <button type="button" onClick={startCamera} className="bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white px-6 py-2 rounded-full">
             Encender Cámara
           </button>
         )}
@@ -73,7 +73,7 @@ export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 
         {photo && <img src={photo} alt="Foto capturada" className="w-full h-full object-cover" />}
       </div>
       {cameraActive && !photo && (
-        <button type="button" onClick={takePhoto} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+        <button type="button" onClick={takePhoto} className="w-full bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2">
           <Camera className="w-4 h-4" /> Capturar Foto
         </button>
       )}

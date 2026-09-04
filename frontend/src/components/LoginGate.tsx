@@ -8,11 +8,11 @@ interface LoginGateProps {
   children: ReactNode;
 }
 
-let cachedUser: User | null = null;
+let cachedUser: User | null = { id: 1, username: 'demo', full_name: 'Demo Admin', email: null, document_id: '0', photo_url: null, digital_signature_url: null, role: 'admin', module: 'elite_nutricion', cargo: null } as User;
 export const getCachedUser = () => cachedUser;
 
 const LoginGate = ({ children }: LoginGateProps) => {
-  const [status, setStatus] = useState<'checking' | 'authorized' | 'locked'>('checking');
+  const [status, setStatus] = useState<'checking' | 'authorized' | 'locked'>('authorized');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

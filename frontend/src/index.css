@@ -33,6 +33,14 @@
   --border: #d2d2d7;
   --border-subtle: #e8e8ed;
   --glass-border: rgba(0, 0, 0, 0.06);
+
+  /* Alias usados por componentes existentes (mantener sincronizados con lo de arriba) */
+  --accent-color: var(--gold);
+  --danger-color: var(--danger);
+  --success-color: var(--success);
+  --warning-color: var(--warning);
+  --surface-bg: var(--surface);
+  --surface-border: var(--border-subtle);
 }
 
 * {

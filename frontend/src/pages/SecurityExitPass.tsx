@@ -88,7 +88,7 @@ export default function SecurityExitPass() {
         )}
 
         <div className="flex items-center justify-center mb-8">
-          <Shield className="w-10 h-10 text-blue-400 mr-3" />
+          <Shield className="w-10 h-10 text-[var(--gold-light)] mr-3" />
           <h1 className="text-3xl font-bold text-white uppercase tracking-wider">Pase de Salida Oficial</h1>
         </div>
 
@@ -98,7 +98,7 @@ export default function SecurityExitPass() {
             <h2 className="text-xl font-bold text-gray-300 mb-4 border-b border-gray-700 pb-2">Datos del Empleado</h2>
             
             <div className="flex flex-col items-center mb-6">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-500 shadow-xl mb-4 bg-gray-800">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--gold)] shadow-xl mb-4 bg-gray-800">
                 {(loan.borrower as any).photo_url ? (
                   <img src={(loan.borrower as any).photo_url} alt="Foto Empleado" className="w-full h-full object-cover" />
                 ) : (
@@ -106,7 +106,7 @@ export default function SecurityExitPass() {
                 )}
               </div>
               <h3 className="text-2xl font-bold text-white text-center">{loan.borrower.full_name}</h3>
-              <p className="text-blue-300">C.C. {loan.borrower.document_id}</p>
+              <p className="text-[var(--gold-light)]">C.C. {loan.borrower.document_id}</p>
             </div>
 
             <div className="bg-white p-2 rounded-lg mt-4 h-32 flex items-center justify-center relative">
@@ -149,7 +149,7 @@ export default function SecurityExitPass() {
                 <div>
                   <p className="text-sm text-gray-400">Estado Préstamo</p>
                   <span className={`px-3 py-1 rounded-full text-sm font-bold mt-1 inline-block ${
-                    loan.status === 'approved' ? 'bg-blue-900/50 text-blue-300 border border-blue-500' :
+                    loan.status === 'approved' ? 'bg-[rgba(176,141,87,0.25)] text-[var(--gold-light)] border border-[var(--gold)]' :
                     loan.status === 'checked_out' ? 'bg-green-900/50 text-green-300 border border-green-500' :
                     'bg-gray-800 text-gray-300'
                   }`}>
@@ -165,7 +165,7 @@ export default function SecurityExitPass() {
         {!isCheckedOut && loan.status === 'approved' && (
           <div className="mt-8 border-t border-gray-700 pt-8">
             <h2 className="text-2xl font-bold text-center text-white mb-6 flex items-center justify-center">
-              <Shield className="w-6 h-6 mr-2 text-yellow-500" />
+              <Shield className="w-6 h-6 mr-2 text-[var(--gold)]" />
               Validación de Seguridad (Pentágono)
             </h2>
             
@@ -202,7 +202,7 @@ export default function SecurityExitPass() {
                 </button>
                 <button 
                   onClick={handleConfirmExit}
-                  className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.5)]"
+                  className="flex-[2] bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-3 rounded-lg font-bold flex items-center justify-center shadow-[0_0_15px_rgba(176,141,87,0.5)]"
                 >
                   <Check className="w-5 h-5 mr-2" />
                   Confirmar Salida

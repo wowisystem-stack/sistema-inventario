@@ -217,7 +217,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg mt-8 shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-60"
+            className="w-full bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-4 rounded-xl font-bold text-lg mt-8 shadow-[0_0_20px_rgba(176,141,87,0.4)] disabled:opacity-60"
           >
             {submitting ? "Creando perfil..." : "Completar Registro"}
           </button>
