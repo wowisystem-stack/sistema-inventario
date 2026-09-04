@@ -1,33 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Clean Corporate Light Palette */
-  --bg-color: #f8fafc; /* Slate 50 */
-  --bg-gradient-1: rgba(59, 130, 246, 0.05); /* Very light blue */
-  --bg-gradient-2: rgba(99, 102, 241, 0.03); /* Very light indigo */
-  
-  /* Liquid Glass (Functional Layer) */
-  --liquid-glass-bg: rgba(255, 255, 255, 0.7);
-  --liquid-glass-blur: 20px;
-  --liquid-glass-border: rgba(0, 0, 0, 0.06);
+  /* Superficies y Fondos */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #fbfbfd;
+  --surface: #ffffff;
+  --surface-elevated: rgba(255, 255, 255, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.72);
 
-  /* Content Layer Panels */
-  --surface-color: rgba(255, 255, 255, 0.85); /* Mostly opaque white */
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --panel-blur: 16px;
-  
-  /* Typography */
-  --text-primary: #0f172a; /* Slate 900 */
-  --text-secondary: #475569; /* Slate 600 */
-  
-  /* Accents */
-  --accent-color: #2563eb; /* Professional Blue */
-  --accent-hover: #1d4ed8;
-  
-  /* Status */
-  --success-color: #059669; /* Emerald 600 */
-  --warning-color: #d97706; /* Amber 600 */
-  --danger-color: #dc2626; /* Red 600 */
+  /* Tinta y Tipografía */
+  --ink: #1d1d1f;
+  --text-primary: #1d1d1f;
+  --ink-secondary: #424245;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+
+  /* Marca (Dorado Elite Nutrition) */
+  --gold: #b08d57;
+  --accent-primary: #b08d57;
+  --gold-deep: #8a6d3d;
+  --accent-secondary: #8a6d3d;
+  --gold-light: #e8d9b5;
+  --gold-gradient: linear-gradient(135deg, #b08d57 0%, #8a6d3d 100%);
+
+  /* Semánticos (Alertas y Estados) */
+  --success: #34c759;
+  --warning: #ff9500;
+  --danger: #ff3b30;
+
+  /* Bordes */
+  --border: #d2d2d7;
+  --border-subtle: #e8e8ed;
+  --glass-border: rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -38,10 +43,10 @@
 
 body {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: var(--bg-color);
+  background-color: var(--bg-primary);
   background-image: 
-    radial-gradient(circle at 15% 50%, var(--bg-gradient-1), transparent 50%),
-    radial-gradient(circle at 85% 30%, var(--bg-gradient-2), transparent 50%);
+    radial-gradient(circle at 15% 50%, rgba(176, 141, 87, 0.05), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(176, 141, 87, 0.03), transparent 50%);
   background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
@@ -52,18 +57,18 @@ body {
 
 /* --- Functional Layer (Liquid Glass) --- */
 .liquid-glass {
-  background: var(--liquid-glass-bg);
-  backdrop-filter: blur(var(--liquid-glass-blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--liquid-glass-blur)) saturate(150%);
-  border-bottom: 1px solid var(--liquid-glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 /* --- Content Layer Panels --- */
 .glass-panel {
-  background: var(--surface-color);
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
-  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
   padding: 24px;
   box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05);
@@ -73,7 +78,7 @@ body {
 .glass-panel:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.12);
+  border-color: var(--border);
 }
 
 /* --- Controls & Inputs --- */
@@ -93,34 +98,34 @@ body {
 }
 
 .btn-primary {
-  background: var(--accent-color);
+  background: var(--gold-gradient);
   color: white;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 14px rgba(176, 141, 87, 0.3);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--accent-secondary);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(176, 141, 87, 0.4);
 }
 
 .btn-outline {
   background: rgba(0, 0, 0, 0.02);
   color: var(--text-primary);
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--border);
   backdrop-filter: blur(10px);
 }
 
 .btn-outline:hover {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.15);
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
 }
 
 .input-field {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text-primary);
   font-family: inherit;
@@ -131,8 +136,8 @@ body {
 .input-field:focus {
   outline: none;
   background: #ffffff;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(176, 141, 87, 0.15);
 }
 
 /* --- Layout --- */
@@ -159,7 +164,7 @@ body {
   font-size: 2.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  background: var(--gold-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -175,10 +180,10 @@ body {
   backdrop-filter: blur(4px);
 }
 
-.badge-available { background: rgba(16, 185, 129, 0.15); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.2); }
-.badge-loaned { background: rgba(245, 158, 11, 0.15); color: var(--warning-color); border: 1px solid rgba(245, 158, 11, 0.2); }
-.badge-maintenance { background: rgba(239, 68, 68, 0.15); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.2); }
-.badge-assigned { background: rgba(59, 130, 246, 0.15); color: var(--accent-color); border: 1px solid rgba(59, 130, 246, 0.2); }
+.badge-available { background: rgba(52, 199, 89, 0.15); color: var(--success); border: 1px solid rgba(52, 199, 89, 0.2); }
+.badge-loaned { background: rgba(255, 149, 0, 0.15); color: var(--warning); border: 1px solid rgba(255, 149, 0, 0.2); }
+.badge-maintenance { background: rgba(255, 59, 48, 0.15); color: var(--danger); border: 1px solid rgba(255, 59, 48, 0.2); }
+.badge-assigned { background: rgba(176, 141, 87, 0.15); color: var(--accent-primary); border: 1px solid rgba(176, 141, 87, 0.2); }
 
 /* --- Grid --- */
 .grid-cards {
