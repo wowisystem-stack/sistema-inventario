@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Pencil } from 'lucide-react';
 import { getUsers, MODULE_LABELS, type User } from '../api';
 import UserEditModal from '../components/UserEditModal';
+import UserProfileCard from '../components/UserProfileCard';
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -32,12 +33,10 @@ const Users = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {users.map((u) => (
             <div key={u.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{u.full_name}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  {u.role} · {u.module ? MODULE_LABELS[u.module] : 'sin módulo'} · {u.cargo || 'sin cargo'}
-                </div>
-              </div>
+              <UserProfileCard
+                user={u}
+                subtitle={`${u.role} · ${u.module ? MODULE_LABELS[u.module] : 'sin módulo'} · ${u.cargo || 'sin cargo'}`}
+              />
               <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setEditingUser(u)}>
                 <Pencil size={14} />
               </button>

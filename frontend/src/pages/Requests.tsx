@@ -5,6 +5,8 @@ import {
   CATEGORY_LABELS, type AssetRequest, type Asset,
 } from '../api';
 import { useModule } from '../moduleContext';
+import UserProfileCard from '../components/UserProfileCard';
+import RequestCommentThread from '../components/RequestCommentThread';
 
 const Requests = () => {
   const { module } = useModule();
@@ -85,14 +87,14 @@ const Requests = () => {
             return (
               <div key={req.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {req.requester.full_name}
-                    {req.category_requested && (
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> · {CATEGORY_LABELS[req.category_requested]}</span>
-                    )}
-                  </div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '4px' }}>{req.description}</div>
+                  <UserProfileCard
+                    user={req.requester}
+                    subtitle={req.category_requested ? CATEGORY_LABELS[req.category_requested] : undefined}
+                  />
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '8px' }}>{req.description}</div>
                 </div>
+
+                <RequestCommentThread requestId={req.id} />
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <select
                     className="input-field"

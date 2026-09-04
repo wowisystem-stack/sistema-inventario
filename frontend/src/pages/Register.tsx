@@ -108,19 +108,19 @@ export default function Register() {
   if (generatedPassword) {
     return (
       <div className="p-8 max-w-lg mx-auto">
-        <div className="liquid-glass p-8 rounded-2xl text-center">
-          <Check className="w-12 h-12 mx-auto mb-4 text-green-400" />
-          <h1 className="text-2xl font-bold mb-2 text-white">Perfil creado</h1>
-          <p className="text-gray-300 mb-6">Guardá esta contraseña — no se va a volver a mostrar.</p>
-          <div className="bg-black/40 border border-white/10 rounded-lg p-4 mb-6 flex items-center justify-between gap-3">
-            <code className="text-lg text-green-300 break-all">{generatedPassword}</code>
+        <div className="liquid-glass p-8 rounded-2xl text-center shadow-lg border border-slate-200">
+          <Check className="w-12 h-12 mx-auto mb-4 text-emerald-600" />
+          <h1 className="text-2xl font-bold mb-2 text-slate-900">Perfil creado</h1>
+          <p className="text-slate-600 mb-6">Guardá esta contraseña — no se va a volver a mostrar.</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 flex items-center justify-between gap-3">
+            <code className="text-lg text-emerald-700 break-all">{generatedPassword}</code>
             <button
               type="button"
               onClick={() => navigator.clipboard.writeText(generatedPassword)}
-              className="shrink-0 bg-white/10 hover:bg-white/20 p-2 rounded-lg"
+              className="shrink-0 bg-slate-200 hover:bg-slate-300 p-2 rounded-lg transition-colors"
               title="Copiar"
             >
-              <Copy className="w-4 h-4 text-white" />
+              <Copy className="w-4 h-4 text-slate-700" />
             </button>
           </div>
           <button
@@ -136,40 +136,40 @@ export default function Register() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="liquid-glass p-8 rounded-2xl">
-        <h1 className="text-3xl font-bold mb-6 text-white text-center">Registro Biométrico de Usuario</h1>
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <div className="liquid-glass p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 text-slate-900 text-center">Registro Biométrico de Usuario</h1>
         
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {/* Datos Personales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Nombre Completo</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
               <input 
                 type="text" 
                 required
-                className="w-full bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.1)] rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 value={formData.full_name}
                 onChange={e => setFormData({...formData, full_name: e.target.value})}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Cédula / Documento</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Cédula / Documento</label>
               <input 
                 type="text" 
                 required
-                className="w-full bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.1)] rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 value={formData.document_id}
                 onChange={e => setFormData({...formData, document_id: e.target.value})}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Correo Electrónico</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
               <input 
                 type="email" 
                 required
-                className="w-full bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.1)] rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
               />
@@ -178,15 +178,15 @@ export default function Register() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
             {/* Foto */}
-            <div className="bg-[rgba(255,255,255,0.05)] p-6 rounded-xl border border-[rgba(255,255,255,0.1)]">
-              <h3 className="text-xl text-white mb-4 flex items-center"><Camera className="w-5 h-5 mr-2" /> Fotografía</h3>
+            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Camera className="w-5 h-5 mr-2 text-blue-600" /> Fotografía</h3>
               <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="1 / 1" />
             </div>
 
             {/* Firma */}
-            <div className="bg-[rgba(255,255,255,0.05)] p-6 rounded-xl border border-[rgba(255,255,255,0.1)]">
-              <h3 className="text-xl text-white mb-4 flex items-center"><Pencil className="w-5 h-5 mr-2" /> Firma Digital</h3>
-              <div className="bg-white rounded-lg overflow-hidden mb-4 relative" style={{ height: '300px' }}>
+            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Pencil className="w-5 h-5 mr-2 text-blue-600" /> Firma Digital</h3>
+              <div className="bg-white rounded-lg overflow-hidden mb-4 relative shadow-inner border border-slate-300" style={{ height: '300px' }}>
                 <canvas 
                   ref={canvasRef}
                   width={400}
@@ -202,17 +202,17 @@ export default function Register() {
                 />
               </div>
               <div className="flex space-x-4">
-                <button type="button" onClick={clearSignature} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium">
+                <button type="button" onClick={clearSignature} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors">
                   Limpiar
                 </button>
-                <button type="button" onClick={saveSignature} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium flex items-center justify-center">
+                <button type="button" onClick={saveSignature} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium flex items-center justify-center transition-colors">
                   <Check className="w-5 h-5 mr-2" /> Confirmar
                 </button>
               </div>
             </div>
           </div>
 
-          {submitError && <p className="text-red-400 text-sm text-center">{submitError}</p>}
+          {submitError && <p className="text-red-500 text-sm text-center font-medium">{submitError}</p>}
 
           <button
             type="submit"

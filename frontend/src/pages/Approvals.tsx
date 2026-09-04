@@ -3,6 +3,7 @@ import { Check, X, Clock, Package } from 'lucide-react';
 import { getLoans, approveLoan, type Loan } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
+import UserProfileCard from '../components/UserProfileCard';
 
 const Approvals = () => {
   const { module } = useModule();
@@ -87,9 +88,11 @@ const Approvals = () => {
                     {statusLabel[loan.status]}
                   </span>
                 </div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>Solicitante:</span> {loan.borrower.full_name} &nbsp;•&nbsp;
-                  <span style={{ color: 'var(--text-primary)' }}> Fecha:</span> {new Date(loan.request_date).toLocaleString('es-CO')}
+                <div style={{ marginBottom: '8px' }}>
+                  <UserProfileCard
+                    user={loan.borrower}
+                    subtitle={`Solicitado el ${new Date(loan.request_date).toLocaleString('es-CO')}`}
+                  />
                 </div>
                 {loan.reason && (
                   <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', borderLeft: '3px solid var(--accent-color)' }}>

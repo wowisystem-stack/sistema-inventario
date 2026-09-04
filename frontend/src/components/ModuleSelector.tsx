@@ -13,10 +13,10 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   return (
     <div className="w-full flex justify-center my-6 px-4">
       <div 
-        className={`liquid-glass p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto shadow-xl max-w-full ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+        className={`liquid-glass p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto scrollbar-hide shadow-sm max-w-full ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
         style={{ 
-          background: 'rgba(255,255,255,0.15)',
-          border: '1px solid rgba(255,255,255,0.25)'
+          background: 'rgba(0,0,0,0.04)',
+          border: '1px solid rgba(0,0,0,0.08)'
         }}
       >
         {modules.map((m) => {
@@ -29,8 +29,8 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
               className={`
                 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ease-out whitespace-nowrap
                 ${isActive 
-                  ? 'bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.15)] scale-100' 
-                  : 'text-slate-200 hover:text-white hover:bg-white/10 scale-95'}
+                  ? 'bg-white text-blue-700 shadow-[0_2px_10px_rgba(0,0,0,0.08)] scale-100' 
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50 scale-95'}
               `}
             >
               {isActive && <Layers size={16} />}

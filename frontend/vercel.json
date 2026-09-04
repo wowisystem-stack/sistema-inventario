@@ -1,4 +1,5 @@
 {
+  "name": "sistema-inventario",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

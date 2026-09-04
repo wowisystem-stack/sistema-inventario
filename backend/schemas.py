@@ -145,6 +145,10 @@ class Loan(LoanBase):
 class LoanApproval(BaseModel):
     approved: bool
 
+class LoanReturn(BaseModel):
+    observations: Optional[str] = None
+    condition_status: Optional[str] = None
+
 class CheckoutRequest(BaseModel):
     observations: Optional[str] = None
 
@@ -198,6 +202,31 @@ class AssetRequest(BaseModel):
 
     requester: User
     reviewed_by: Optional[User] = None
+
+    class Config:
+        from_attributes = True
+
+class RequestCommentCreate(BaseModel):
+    message: str
+
+class RequestComment(BaseModel):
+    id: int
+    asset_request_id: int
+    message: str
+    created_at: datetime
+    author: User
+
+    class Config:
+        from_attributes = True
+
+class ActivityLog(BaseModel):
+    id: int
+    action: str
+    description: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    created_at: datetime
+    actor: Optional[User] = None
 
     class Config:
         from_attributes = True

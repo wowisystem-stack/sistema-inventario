@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import models, schemas
 from database import engine, get_db
-from services import qr_generator, biometrics, depreciation, auth as auth_service
+from services import qr_generator, biometrics, depreciation, auth as auth_service, audit
 from services.asset_classifier import classify_asset
 
 load_dotenv()
@@ -110,6 +110,9 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
+    audit.log_action(db, user, "user.registered", f"{user.full_name} se registró en el sistema", entity_type="user", entity_id=user.id)
+    db.commit()
+
     token = auth_service.create_token(db, user)
     return schemas.AuthResponse(token=token, user=user, generated_password=generated_password)
 
@@ -118,9 +121,16 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
 def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     if not user or not user.password_hash or not auth_service.verify_password(payload.password, user.password_hash):
+        audit.log_action(
+            db, user, "auth.login_failed", f"Intento de login fallido para {payload.email}",
+            entity_type="user", entity_id=user.id if user else None,
+        )
+        db.commit()
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
 
     token = auth_service.create_token(db, user)
+    audit.log_action(db, user, "auth.login", f"{user.full_name} inició sesión", entity_type="user", entity_id=user.id)
+    db.commit()
     return schemas.AuthResponse(token=token, user=user)
 
 
@@ -153,6 +163,9 @@ def create_user(
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    audit.log_action(db, _admin, "user.created", f"{_admin.full_name} creó al usuario {new_user.full_name}", entity_type="user", entity_id=new_user.id)
+    db.commit()
     return new_user
 
 @app.get("/users/", response_model=List[schemas.User])
@@ -171,6 +184,7 @@ def update_user(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     for field, value in update.dict(exclude_unset=True).items():
         setattr(user, field, value)
+    audit.log_action(db, _admin, "user.updated", f"{_admin.full_name} editó al usuario {user.full_name}", entity_type="user", entity_id=user.id)
     db.commit()
     db.refresh(user)
     return user
@@ -223,6 +237,9 @@ def create_asset(
     db.add(new_asset)
     db.commit()
     db.refresh(new_asset)
+
+    audit.log_action(db, _user, "asset.created", f"{_user.full_name} creó el activo {new_asset.unique_code} ({new_asset.description})", entity_type="asset", entity_id=new_asset.id)
+    db.commit()
     return new_asset
 
 @app.get("/assets/", response_model=List[schemas.Asset])
@@ -311,6 +328,7 @@ def update_asset(
     if update.purchase_price is not None:
         asset.value_source = models.ValueSourceEnum.MANUAL
 
+    audit.log_action(db, _user, "asset.updated", f"{_user.full_name} editó el activo {asset.unique_code}", entity_type="asset", entity_id=asset.id)
     db.commit()
     db.refresh(asset)
     return asset
@@ -350,22 +368,31 @@ def get_asset_depreciation(asset_id: int, db: Session = Depends(get_db)):
 
 @app.get("/assets/verify/{unique_code}", response_model=dict)
 def verify_asset_status(unique_code: str, db: Session = Depends(get_db)):
-    # Este endpoint lo usará el "Personal de salida" escaneando el QR
+    # Este endpoint lo usará el "Personal de salida" escaneando el QR.
+    # El escaneo ocurre ANTES del checkout físico: en ese momento el préstamo
+    # ya aprobado todavía está en estado APPROVED (recién pasa a CHECKED_OUT
+    # cuando el guardia confirma la salida en /loans/{id}/checkout-security).
+    # Por eso hay que autorizar tanto APPROVED como CHECKED_OUT, no solo este último.
     asset = db.query(models.Asset).filter(models.Asset.unique_code == unique_code).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
-    
-    # Buscar si tiene un préstamo activo
-    active_loan = db.query(models.Loan).filter(
-        models.Loan.asset_id == asset.id,
-        models.Loan.status == models.LoanStatusEnum.CHECKED_OUT
-    ).first()
-    
+
+    active_loan = (
+        db.query(models.Loan)
+        .filter(
+            models.Loan.asset_id == asset.id,
+            models.Loan.status.in_([models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]),
+        )
+        .order_by(models.Loan.request_date.desc())
+        .first()
+    )
+
     return {
         "asset_code": asset.unique_code,
         "asset_description": asset.description,
         "status": asset.status.value,
         "is_authorized_to_leave": active_loan is not None,
+        "loan_status": active_loan.status.value if active_loan else None,
         "loan_id": active_loan.id if active_loan else None,
         "borrower_name": active_loan.borrower.full_name if active_loan else None,
         "borrower_photo": active_loan.borrower.photo_url if active_loan else None,
@@ -421,6 +448,9 @@ def request_loan(
     db.add(new_loan)
     db.commit()
     db.refresh(new_loan)
+
+    audit.log_action(db, current_user, "loan.requested", f"{current_user.full_name} solicitó el préstamo del activo {asset.unique_code}", entity_type="loan", entity_id=new_loan.id)
+    db.commit()
     return new_loan
 
 @app.post("/loans/{loan_id}/approve", response_model=schemas.Loan)
@@ -437,7 +467,9 @@ def approve_loan(
     loan.approver_id = current_user.id
     loan.approval_date = datetime.utcnow()
     loan.status = models.LoanStatusEnum.APPROVED if approval.approved else models.LoanStatusEnum.REJECTED
-    
+
+    verb = "aprobó" if approval.approved else "rechazó"
+    audit.log_action(db, current_user, f"loan.{loan.status.value}", f"{current_user.full_name} {verb} el préstamo #{loan.id}", entity_type="loan", entity_id=loan.id)
     db.commit()
     db.refresh(loan)
     return loan
@@ -466,7 +498,8 @@ async def checkout_loan(
     loan.status = models.LoanStatusEnum.CHECKED_OUT
     loan.checkout_date = datetime.utcnow()
     loan.asset.status = models.AssetStatusEnum.LOANED
-    
+
+    audit.log_action(db, None, "loan.checked_out", f"Se registró la salida del préstamo #{loan.id} (activo {loan.asset.unique_code}) con validación biométrica", entity_type="loan", entity_id=loan.id)
     db.commit()
     db.refresh(loan)
     return loan
@@ -489,21 +522,33 @@ def checkout_loan_security(loan_id: int, request: SecurityCheckoutRequest, db: S
     loan.status = models.LoanStatusEnum.CHECKED_OUT
     loan.checkout_date = datetime.utcnow()
     loan.asset.status = models.AssetStatusEnum.LOANED
-    
+
+    audit.log_action(db, None, "loan.checked_out", f"Personal de salida registró la salida del préstamo #{loan.id} (activo {loan.asset.unique_code})", entity_type="loan", entity_id=loan.id)
     db.commit()
     db.refresh(loan)
     return loan
 
 @app.post("/loans/{loan_id}/return", response_model=schemas.Loan)
-def return_loan(loan_id: int, db: Session = Depends(get_db)):
+def return_loan(
+    loan_id: int,
+    payload: Optional[schemas.LoanReturn] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO, models.RoleEnum.SALIDA)),
+):
+    payload = payload or schemas.LoanReturn()
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
     if not loan or loan.status != models.LoanStatusEnum.CHECKED_OUT:
         raise HTTPException(status_code=400, detail="Préstamo no válido para devolución")
-        
+
     loan.status = models.LoanStatusEnum.RETURNED
     loan.return_date = datetime.utcnow()
     loan.asset.status = models.AssetStatusEnum.AVAILABLE
+    if payload.observations:
+        loan.observations = payload.observations
+    if payload.condition_status:
+        loan.condition_status = payload.condition_status
 
+    audit.log_action(db, current_user, "loan.returned", f"{current_user.full_name} registró la devolución del activo {loan.asset.unique_code}", entity_type="loan", entity_id=loan.id)
     db.commit()
     db.refresh(loan)
     return loan
@@ -538,6 +583,9 @@ def create_assignment(payload: schemas.AssignmentCreate, db: Session = Depends(g
     db.add(assignment)
     db.commit()
     db.refresh(assignment)
+
+    audit.log_action(db, assignment.authorized_by, "assignment.created", f"Se asignó el activo {asset.unique_code} a {assignment.user.full_name}", entity_type="assignment", entity_id=assignment.id)
+    db.commit()
     return assignment
 
 @app.post("/assignments/{assignment_id}/renew", response_model=schemas.Assignment)
@@ -547,6 +595,7 @@ def renew_assignment(assignment_id: int, duration_days: int = 90, db: Session = 
         raise HTTPException(status_code=400, detail="Asignación no válida para renovar")
 
     assignment.expiration_date = datetime.utcnow() + timedelta(days=duration_days)
+    audit.log_action(db, None, "assignment.renewed", f"Se renovó la asignación #{assignment.id} ({assignment.asset.unique_code} — {assignment.user.full_name})", entity_type="assignment", entity_id=assignment.id)
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -559,6 +608,7 @@ def revoke_assignment(assignment_id: int, db: Session = Depends(get_db)):
 
     assignment.status = models.AssignmentStatusEnum.REVOKED
     assignment.asset.status = models.AssetStatusEnum.AVAILABLE
+    audit.log_action(db, None, "assignment.revoked", f"Se revocó la asignación #{assignment.id} ({assignment.asset.unique_code} — {assignment.user.full_name})", entity_type="assignment", entity_id=assignment.id)
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -580,6 +630,9 @@ def create_asset_request(
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
+
+    audit.log_action(db, current_user, "asset_request.created", f"{current_user.full_name} solicitó un activo: {new_request.description}", entity_type="asset_request", entity_id=new_request.id)
+    db.commit()
     return new_request
 
 @app.get("/asset-requests/mine", response_model=List[schemas.AssetRequest])
@@ -644,6 +697,11 @@ def assign_asset_request(
     asset_request.review_notes = payload.notes
     asset_request.resulting_loan_id = new_loan.id
 
+    audit.log_action(
+        db, current_user, "asset_request.assigned",
+        f"{current_user.full_name} asignó el activo {asset.unique_code} a la solicitud de {asset_request.requester.full_name}",
+        entity_type="asset_request", entity_id=asset_request.id,
+    )
     db.commit()
     db.refresh(asset_request)
     return asset_request
@@ -664,6 +722,96 @@ def reject_asset_request(
     asset_request.reviewed_at = datetime.utcnow()
     asset_request.review_notes = payload.notes
 
+    audit.log_action(
+        db, current_user, "asset_request.rejected",
+        f"{current_user.full_name} rechazó la solicitud de {asset_request.requester.full_name}",
+        entity_type="asset_request", entity_id=asset_request.id,
+    )
     db.commit()
     db.refresh(asset_request)
     return asset_request
+
+
+def _can_access_asset_request(current_user: "models.User", asset_request: "models.AssetRequest") -> bool:
+    if current_user.role == models.RoleEnum.ADMIN:
+        return True
+    if current_user.id == asset_request.requester_id:
+        return True
+    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module == asset_request.module:
+        return True
+    return False
+
+
+@app.get("/asset-requests/{request_id}/comments", response_model=List[schemas.RequestComment])
+def get_request_comments(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    asset_request = db.query(models.AssetRequest).filter(models.AssetRequest.id == request_id).first()
+    if not asset_request:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if not _can_access_asset_request(current_user, asset_request):
+        raise HTTPException(status_code=403, detail="No tenés permiso para ver esta solicitud")
+
+    return (
+        db.query(models.RequestComment)
+        .filter(models.RequestComment.asset_request_id == request_id)
+        .order_by(models.RequestComment.created_at.asc())
+        .all()
+    )
+
+
+@app.post("/asset-requests/{request_id}/comments", response_model=schemas.RequestComment)
+def create_request_comment(
+    request_id: int,
+    payload: schemas.RequestCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    asset_request = db.query(models.AssetRequest).filter(models.AssetRequest.id == request_id).first()
+    if not asset_request:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if not _can_access_asset_request(current_user, asset_request):
+        raise HTTPException(status_code=403, detail="No tenés permiso para comentar esta solicitud")
+
+    comment = models.RequestComment(
+        asset_request_id=request_id,
+        author_id=current_user.id,
+        message=payload.message,
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+
+    audit.log_action(
+        db, current_user, "asset_request.commented",
+        f"{current_user.full_name} comentó en la solicitud de {asset_request.requester.full_name}",
+        entity_type="asset_request", entity_id=asset_request.id,
+    )
+    db.commit()
+    return comment
+
+
+# --- Endpoints de Auditoría (solo admin) ---
+@app.get("/activity-logs/", response_model=List[schemas.ActivityLog])
+def get_activity_logs(
+    entity_type: Optional[str] = None,
+    actor_id: Optional[int] = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    query = db.query(models.ActivityLog)
+    if entity_type:
+        query = query.filter(models.ActivityLog.entity_type == entity_type)
+    if actor_id:
+        query = query.filter(models.ActivityLog.actor_id == actor_id)
+
+    return (
+        query.order_by(models.ActivityLog.created_at.desc())
+        .offset(offset)
+        .limit(min(limit, 200))
+        .all()
+    )

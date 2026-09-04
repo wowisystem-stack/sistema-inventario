@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Printer } from 'lucide-react';
 import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, MODULE_LABELS, CATEGORY_LABELS, STATUS_LABELS, type Asset, type Module, type AssetStatus, type Depreciation } from '../api';
 
 interface AssetEditModalProps {
@@ -62,6 +62,31 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePrintQR = () => {
+    const printWindow = window.open('', '', 'width=400,height=400');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>QR - ${asset.unique_code}</title>
+            <style>
+              body { font-family: sans-serif; text-align: center; padding: 20px; }
+              img { width: 200px; height: 200px; margin-bottom: 10px; }
+              h2 { margin: 0; font-size: 1.2rem; }
+              p { margin: 5px 0 0; color: #555; font-size: 0.9rem; }
+            </style>
+          </head>
+          <body onload="window.print(); window.close();">
+            <img src="data:image/png;base64,${asset.qr_data}" />
+            <h2>${asset.unique_code}</h2>
+            <p>${asset.description}</p>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
   };
 
@@ -188,6 +213,19 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
               </label>
             </div>
           </label>
+
+          {asset.qr_data && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--surface-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--surface-border)' }}>
+              <img src={`data:image/png;base64,${asset.qr_data}`} alt="QR" style={{ width: '64px', height: '64px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Código QR asignado</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Pégalo en el activo para control de préstamos</div>
+                <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handlePrintQR}>
+                  <Printer size={14} /> Imprimir QR
+                </button>
+              </div>
+            </div>
+          )}
 
           {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
 

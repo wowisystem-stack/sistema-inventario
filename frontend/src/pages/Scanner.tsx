@@ -43,6 +43,7 @@ const Scanner = () => {
             asset_description: 'Dispositivo Desconocido / No autorizado',
             status: 'available',
             is_authorized_to_leave: false,
+            loan_status: null,
             loan_id: null,
             borrower_name: null,
             borrower_photo: null,
@@ -89,7 +90,16 @@ const Scanner = () => {
               <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
             </div>
           ) : verification ? (
-            verification.is_authorized_to_leave ? (
+            verification.is_authorized_to_leave && verification.loan_status === 'checked_out' ? (
+              <div style={{ color: 'var(--text-secondary)' }}>
+                <CheckCircle size={64} style={{ margin: '0 auto 16px', opacity: 0.6 }} />
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>SALIDA YA REGISTRADA</h2>
+                <div style={{ marginBottom: '24px' }}>
+                  <p style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>{verification.asset_description}</p>
+                  <p>Este activo ya salió, prestado a: <strong style={{ color: 'var(--text-primary)' }}>{verification.borrower_name}</strong></p>
+                </div>
+              </div>
+            ) : verification.is_authorized_to_leave ? (
               <div style={{ color: 'var(--success-color)' }}>
                 <CheckCircle size={64} style={{ margin: '0 auto 16px' }} />
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>SALIDA AUTORIZADA</h2>
@@ -98,8 +108,8 @@ const Scanner = () => {
                   <p style={{ color: 'var(--text-secondary)' }}>Prestado a: <strong style={{ color: 'white' }}>{verification.borrower_name}</strong></p>
                 </div>
                 {verification.loan_id && (
-                    <button 
-                      className="btn btn-primary" 
+                    <button
+                      className="btn btn-primary"
                       style={{ width: '100%', marginBottom: '16px', padding: '16px', fontSize: '1.1rem' }}
                       onClick={() => window.location.href = `/security-exit/${verification.loan_id}`}
                     >

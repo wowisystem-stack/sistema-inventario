@@ -102,6 +102,7 @@ export interface VerificationResult {
   asset_description: string;
   status: AssetStatus;
   is_authorized_to_leave: boolean;
+  loan_status: LoanStatus | null;
   loan_id: number | null;
   borrower_name: string | null;
   borrower_photo: string | null;
@@ -268,6 +269,12 @@ export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: st
     body: JSON.stringify({ security_signature_base64: securitySignatureBase64 }),
   });
 
+export const returnLoan = (loanId: number, details?: { observations?: string; condition_status?: string }) =>
+  request<Loan>(`/loans/${loanId}/return`, {
+    method: 'POST',
+    body: JSON.stringify(details ?? {}),
+  });
+
 export type AssignmentStatus = 'active' | 'expired' | 'revoked';
 
 export interface Assignment {
@@ -339,3 +346,40 @@ export const rejectAssetRequest = (requestId: number, notes?: string) =>
     method: 'POST',
     body: JSON.stringify({ notes }),
   });
+
+export interface RequestComment {
+  id: number;
+  asset_request_id: number;
+  message: string;
+  created_at: string;
+  author: User;
+}
+
+export const getRequestComments = (requestId: number) =>
+  request<RequestComment[]>(`/asset-requests/${requestId}/comments`);
+
+export const addRequestComment = (requestId: number, message: string) =>
+  request<RequestComment>(`/asset-requests/${requestId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+
+export interface ActivityLog {
+  id: number;
+  action: string;
+  description: string;
+  entity_type: string | null;
+  entity_id: number | null;
+  created_at: string;
+  actor: User | null;
+}
+
+export const getActivityLogs = (params?: { entity_type?: string; actor_id?: number; limit?: number; offset?: number }) => {
+  const query = new URLSearchParams();
+  if (params?.entity_type) query.set('entity_type', params.entity_type);
+  if (params?.actor_id) query.set('actor_id', String(params.actor_id));
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.offset) query.set('offset', String(params.offset));
+  const qs = query.toString();
+  return request<ActivityLog[]>(`/activity-logs/${qs ? `?${qs}` : ''}`);
+};

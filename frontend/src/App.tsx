@@ -12,8 +12,10 @@ import Users from './pages/Users';
 import Register from './pages/Register';
 import SecurityExitPass from './pages/SecurityExitPass';
 import Requests from './pages/Requests';
+import Returns from './pages/Returns';
 import AddAsset from './pages/AddAsset';
 import QRCodes from './pages/QRCodes';
+import ActivityLogs from './pages/ActivityLogs';
 import ModuleSelector from './components/ModuleSelector';
 import './index.css';
 
@@ -30,6 +32,7 @@ function AppShell() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/scanner" element={<Scanner />} />
+          <Route path="/returns" element={<Returns />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/assets/new" element={<AddAsset />} />
@@ -37,6 +40,7 @@ function AppShell() {
           <Route path="/unused" element={<UnusedAssets />} />
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/logs" element={<ActivityLogs />} />
           <Route path="/security-exit/:id" element={<SecurityExitPass />} />
         </Routes>
       </main>

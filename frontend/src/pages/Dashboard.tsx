@@ -9,6 +9,7 @@ import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
 import AssetEditModal from '../components/AssetEditModal';
 import RequestLoanModal from '../components/RequestLoanModal';
+import RequestCommentThread from '../components/RequestCommentThread';
 
 const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente', assigned: 'Asignada', rejected: 'Rechazada',
@@ -83,14 +84,17 @@ const EmployeeRequestView = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {myRequests.map((r) => (
-            <div key={r.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{r.description}</div>
+            <div key={r.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{r.description}</div>
+                </div>
+                <span className={`badge ${r.status === 'assigned' ? 'badge-available' : r.status === 'rejected' ? 'badge-maintenance' : 'badge-loaned'}`}>
+                  {REQUEST_STATUS_LABELS[r.status]}
+                </span>
               </div>
-              <span className={`badge ${r.status === 'assigned' ? 'badge-available' : r.status === 'rejected' ? 'badge-maintenance' : 'badge-loaned'}`}>
-                {REQUEST_STATUS_LABELS[r.status]}
-              </span>
+              <RequestCommentThread requestId={r.id} />
             </div>
           ))}
         </div>

@@ -212,3 +212,34 @@ class AssetRequest(Base):
     requester = relationship("User", foreign_keys=[requester_id])
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
     resulting_loan = relationship("Loan")
+
+
+class RequestComment(Base):
+    """Mensaje de un hilo tipo PQR entre el solicitante y el encargado,
+    asociado a una AssetRequest puntual."""
+    __tablename__ = "request_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    asset_request_id = Column(Integer, ForeignKey("asset_requests.id"))
+    author_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    asset_request = relationship("AssetRequest")
+    author = relationship("User")
+
+
+class ActivityLog(Base):
+    """Registro de auditoría: una entrada legible por cada acción relevante
+    ocurrida en el servidor (quién hizo qué, sobre qué entidad)."""
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String, index=True)
+    description = Column(Text)
+    entity_type = Column(String, nullable=True, index=True)
+    entity_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    actor = relationship("User")
