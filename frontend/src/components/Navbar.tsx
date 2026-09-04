@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
+import logo from '../assets/logo_elite_nutrition.jpeg';
 
 const Navbar = () => {
   const location = useLocation();
@@ -35,12 +36,7 @@ const Navbar = () => {
       {/* Top row on mobile: Logo and Logout */}
       <div className="flex items-center justify-between w-full md:w-auto">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg flex items-center justify-center shadow-[0_4px_14px_rgba(37,99,235,0.4)]">
-            <Package size={24} color="white" />
-          </div>
-          <h1 className="text-xl font-bold m-0 tracking-tight text-[var(--text-primary)]">
-            Elite Nutrition
-          </h1>
+          <img src={logo} alt="Elite Nutrition" style={{ height: '52px', width: 'auto', display: 'block' }} />
         </div>
 
         {currentUser && (
@@ -65,7 +61,7 @@ const Navbar = () => {
               to={item.path}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl no-underline transition-all whitespace-nowrap text-sm ${
                 isActive
-                  ? 'text-white bg-blue-600 font-semibold shadow-[0_0_12px_rgba(37,99,235,0.3)]'
+                  ? 'text-white bg-[var(--gold)] font-semibold shadow-[0_0_12px_rgba(176,141,87,0.35)]'
                   : 'text-[var(--text-secondary)] hover:bg-black/5 font-medium'
               }`}
             >
