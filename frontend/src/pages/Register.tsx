@@ -126,7 +126,7 @@ export default function Register() {
           <button
             type="button"
             onClick={() => navigate("/dashboard")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold"
+            className="w-full bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-3 rounded-xl font-bold"
           >
             Ya la guardé, continuar
           </button>
@@ -149,7 +149,7 @@ export default function Register() {
               <input 
                 type="text" 
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.full_name}
                 onChange={e => setFormData({...formData, full_name: e.target.value})}
               />
@@ -159,7 +159,7 @@ export default function Register() {
               <input 
                 type="text" 
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.document_id}
                 onChange={e => setFormData({...formData, document_id: e.target.value})}
               />
@@ -169,7 +169,7 @@ export default function Register() {
               <input 
                 type="email" 
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
               />
@@ -179,13 +179,13 @@ export default function Register() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
             {/* Foto */}
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Camera className="w-5 h-5 mr-2 text-blue-600" /> Fotografía</h3>
+              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Camera className="w-5 h-5 mr-2 text-[var(--gold)]" /> Fotografía</h3>
               <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="1 / 1" />
             </div>
 
             {/* Firma */}
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Pencil className="w-5 h-5 mr-2 text-blue-600" /> Firma Digital</h3>
+              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Pencil className="w-5 h-5 mr-2 text-[var(--gold)]" /> Firma Digital</h3>
               <div className="bg-white rounded-lg overflow-hidden mb-4 relative shadow-inner border border-slate-300" style={{ height: '300px' }}>
                 <canvas 
                   ref={canvasRef}
