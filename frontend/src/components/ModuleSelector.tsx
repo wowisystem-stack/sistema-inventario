@@ -30,7 +30,7 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
                 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ease-out whitespace-nowrap
                 ${isActive 
                   ? 'bg-white text-[var(--gold-deep)] shadow-[0_2px_10px_rgba(0,0,0,0.08)] scale-100'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50 scale-95'}
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/50 scale-95'}
               `}
             >
               {isActive && <Layers size={16} />}

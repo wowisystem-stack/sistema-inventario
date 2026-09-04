@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
-import logo from '../assets/logo_elite_nutrition.jpeg';
+import logoIcon from '../assets/logo_elite_nutrition_icon.png';
 
 const Navbar = () => {
   const location = useLocation();
@@ -35,8 +35,14 @@ const Navbar = () => {
     <nav className="liquid-glass sticky top-0 z-50 px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
       {/* Top row on mobile: Logo and Logout */}
       <div className="flex items-center justify-between w-full md:w-auto">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Elite Nutrition" style={{ height: '52px', width: 'auto', display: 'block' }} />
+        <div className="flex items-center gap-3" style={{ flexShrink: 0, marginRight: '8px' }}>
+          <img src={logoIcon} alt="Elite Nutrition" style={{ height: '40px', width: 'auto', display: 'block', flexShrink: 0 }} />
+          <h1
+            className="text-lg font-bold m-0 tracking-tight text-[var(--text-primary)] hidden 2xl:block"
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            Elite Nutrition
+          </h1>
         </div>
 
         {currentUser && (
