@@ -1,4 +1,5 @@
 import os
+import re
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Header, HTTPException, UploadFile, File, status
@@ -241,6 +242,78 @@ def create_asset(
     audit.log_action(db, _user, "asset.created", f"{_user.full_name} creó el activo {new_asset.unique_code} ({new_asset.description})", entity_type="asset", entity_id=new_asset.id)
     db.commit()
     return new_asset
+
+@app.post("/assets/batch-generate", response_model=List[schemas.Asset])
+def batch_generate_assets(
+    payload: schemas.AssetBatchGenerate,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
+    if payload.quantity < 1 or payload.quantity > 500:
+        raise HTTPException(status_code=400, detail="La cantidad debe estar entre 1 y 500")
+
+    prefix = payload.prefix.strip().upper()
+    if not prefix:
+        raise HTTPException(status_code=400, detail="El prefijo no puede estar vacío")
+
+    existing_codes = {
+        code for (code,) in db.query(models.Asset.unique_code)
+        .filter(models.Asset.unique_code.like(f"{prefix}-%"))
+        .all()
+    }
+
+    if payload.start_number is not None:
+        next_number = payload.start_number
+    else:
+        max_number = 0
+        pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
+        for code in existing_codes:
+            match = pattern.match(code)
+            if match:
+                max_number = max(max_number, int(match.group(1)))
+        next_number = max_number + 1
+
+    created = []
+    n = next_number
+    while len(created) < payload.quantity:
+        code = f"{prefix}-{n:04d}"
+        n += 1
+        if code in existing_codes:
+            continue
+
+        qr_base64 = qr_generator.generate_qr_base64(code)
+        new_asset = models.Asset(
+            unique_code=code,
+            description=None,
+            brand_model=None,
+            status=models.AssetStatusEnum.PENDING_REGISTRATION,
+            qr_data=qr_base64,
+            module=payload.module,
+        )
+        db.add(new_asset)
+        existing_codes.add(code)
+        created.append(new_asset)
+
+    audit.log_action(
+        db, _user, "asset.batch_generated",
+        f"{_user.full_name} generó {len(created)} códigos con prefijo {prefix} ({payload.module.value})",
+        entity_type="asset",
+    )
+    db.commit()
+    for asset in created:
+        db.refresh(asset)
+    return created
+
+@app.get("/assets/by-code/{unique_code}", response_model=schemas.Asset)
+def get_asset_by_code(
+    unique_code: str,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
+    asset = db.query(models.Asset).filter(models.Asset.unique_code == unique_code).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Código no encontrado")
+    return asset
 
 @app.get("/assets/", response_model=List[schemas.Asset])
 def get_assets(

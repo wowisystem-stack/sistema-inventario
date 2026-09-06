@@ -10,8 +10,8 @@ interface AssetEditModalProps {
 
 const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
   const [form, setForm] = useState({
-    description: asset.description,
-    brand_model: asset.brand_model,
+    description: asset.description ?? '',
+    brand_model: asset.brand_model ?? '',
     status: asset.status,
     module: asset.module,
     area: asset.area ?? '',
@@ -82,7 +82,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
           <body onload="window.print(); window.close();">
             <img src="data:image/png;base64,${asset.qr_data}" />
             <h2>${asset.unique_code}</h2>
-            <p>${asset.description}</p>
+            <p>${asset.description ?? 'Pendiente de registro'}</p>
           </body>
         </html>
       `);
@@ -200,7 +200,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
           <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Foto</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {asset.photo_url && <img src={asset.photo_url} alt={asset.description} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px' }} />}
+              {asset.photo_url && <img src={asset.photo_url} alt={asset.description ?? asset.unique_code} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px' }} />}
               <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
                 <Upload size={16} />
                 {photoFile ? photoFile.name : 'Subir foto'}

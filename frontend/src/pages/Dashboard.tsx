@@ -124,7 +124,7 @@ const CatalogView = () => {
   }, [module]);
 
   const filteredAssets = assets.filter(a =>
-    a.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
     (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
@@ -168,7 +168,7 @@ const CatalogView = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{asset.unique_code}</div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>{asset.description}</h3>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>{asset.description ?? 'Pendiente de registro'}</h3>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className={`badge badge-${asset.status}`}>

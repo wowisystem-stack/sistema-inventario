@@ -3,13 +3,14 @@ import { getToken } from './session';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export type AssetStatus = 'available' | 'loaned' | 'maintenance' | 'assigned';
+export type AssetStatus = 'available' | 'loaned' | 'maintenance' | 'assigned' | 'pending_registration';
 
 export const STATUS_LABELS: Record<AssetStatus, string> = {
   available: 'Disponible',
   loaned: 'Prestado',
   maintenance: 'Mantenimiento',
   assigned: 'Asignado',
+  pending_registration: 'Pendiente de registro',
 };
 export type LoanStatus = 'pending' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type Role = 'admin' | 'encargado' | 'salida' | 'empleado';
@@ -39,8 +40,8 @@ export const MODULE_LABELS: Record<Module, string> = {
 export interface Asset {
   id: number;
   unique_code: string;
-  description: string;
-  brand_model: string;
+  description: string | null;
+  brand_model: string | null;
   photo_url: string | null;
   status: AssetStatus;
   qr_data: string;
@@ -170,6 +171,19 @@ export interface AssetCreateInput {
 
 export const createAsset = (payload: AssetCreateInput) =>
   request<Asset>('/assets/', { method: 'POST', body: JSON.stringify(payload) });
+
+export interface AssetBatchGenerateInput {
+  module: Module;
+  prefix: string;
+  quantity: number;
+  start_number?: number;
+}
+
+export const batchGenerateAssets = (payload: AssetBatchGenerateInput) =>
+  request<Asset[]>('/assets/batch-generate', { method: 'POST', body: JSON.stringify(payload) });
+
+export const getAssetByCode = (code: string) =>
+  request<Asset>(`/assets/by-code/${encodeURIComponent(code)}`);
 
 export interface UnusedAsset {
   id: number;

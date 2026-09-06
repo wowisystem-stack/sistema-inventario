@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import logoIcon from '../assets/logo_elite_nutrition_icon.png';
@@ -23,6 +23,7 @@ const Navbar = () => {
     { path: '/requests', label: 'Solicitudes', icon: Inbox, show: isEncargadoOrAdmin },
     { path: '/assets/new', label: 'Nuevo Activo', icon: PlusCircle, show: isEncargadoOrAdmin },
     { path: '/qr-codes', label: 'Códigos QR', icon: Grid3x3, show: isEncargadoOrAdmin },
+    { path: '/assets/register-by-code', label: 'Registrar por Código', icon: ScanLine, show: isEncargadoOrAdmin },
     { path: '/scanner', label: 'Control Salida', icon: QrCode, show: !isEmpleado },
     { path: '/returns', label: 'Devoluciones', icon: PackageCheck, show: !isEmpleado },
     { path: '/unused', label: 'Sin Uso', icon: AlertTriangle, show: isEncargadoOrAdmin },

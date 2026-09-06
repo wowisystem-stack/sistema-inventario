@@ -15,6 +15,7 @@ class AssetStatusEnum(enum.Enum):
     LOANED = "loaned"
     MAINTENANCE = "maintenance"
     ASSIGNED = "assigned"
+    PENDING_REGISTRATION = "pending_registration"
 
 class AssignmentStatusEnum(enum.Enum):
     ACTIVE = "active"

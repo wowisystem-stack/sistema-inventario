@@ -14,6 +14,7 @@ import SecurityExitPass from './pages/SecurityExitPass';
 import Requests from './pages/Requests';
 import Returns from './pages/Returns';
 import AddAsset from './pages/AddAsset';
+import RegisterByCode from './pages/RegisterByCode';
 import QRCodes from './pages/QRCodes';
 import ActivityLogs from './pages/ActivityLogs';
 import ModuleSelector from './components/ModuleSelector';
@@ -36,6 +37,7 @@ function AppShell() {
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/assets/new" element={<AddAsset />} />
+          <Route path="/assets/register-by-code" element={<RegisterByCode />} />
           <Route path="/qr-codes" element={<QRCodes />} />
           <Route path="/unused" element={<UnusedAssets />} />
           <Route path="/assignments" element={<Assignments />} />

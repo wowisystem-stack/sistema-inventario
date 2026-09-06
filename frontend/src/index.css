@@ -192,6 +192,7 @@ body {
 .badge-loaned { background: rgba(255, 149, 0, 0.15); color: var(--warning); border: 1px solid rgba(255, 149, 0, 0.2); }
 .badge-maintenance { background: rgba(255, 59, 48, 0.15); color: var(--danger); border: 1px solid rgba(255, 59, 48, 0.2); }
 .badge-assigned { background: rgba(176, 141, 87, 0.15); color: var(--accent-primary); border: 1px solid rgba(176, 141, 87, 0.2); }
+.badge-pending_registration { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
 
 /* --- Grid --- */
 .grid-cards {

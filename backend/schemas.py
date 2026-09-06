@@ -53,8 +53,8 @@ class RolePermission(BaseModel):
 
 class AssetBase(BaseModel):
     unique_code: str
-    description: str
-    brand_model: str
+    description: Optional[str] = None
+    brand_model: Optional[str] = None
     photo_url: Optional[str] = None
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
     qr_data: str
@@ -94,6 +94,12 @@ class Asset(AssetBase):
     id: int
     class Config:
         from_attributes = True
+
+class AssetBatchGenerate(BaseModel):
+    module: ModuleEnum
+    prefix: str
+    quantity: int
+    start_number: Optional[int] = None
 
 class AssetUpdate(BaseModel):
     description: Optional[str] = None
