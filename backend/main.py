@@ -846,7 +846,7 @@ def return_loan(
 ):
     payload = payload or schemas.LoanReturn()
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
-    if not loan or loan.status != models.LoanStatusEnum.CHECKED_OUT:
+    if not loan or loan.status not in [models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED]:
         raise HTTPException(status_code=400, detail="Préstamo no válido para devolución")
 
     if current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN) and not auth_service.can_access_warehouse(current_user, loan.asset.module):
