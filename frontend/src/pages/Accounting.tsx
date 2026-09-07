@@ -90,21 +90,21 @@ const Accounting = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Calculator className="text-blue-500" />
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Calculator style={{ color: 'var(--gold)' }} />
             Contabilidad y Auditoría
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Resumen financiero de activos en {MODULE_LABELS[module]}
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-2">
+        <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-2 border border-red-200">
           <AlertCircle size={20} />
           {error}
         </div>
@@ -112,51 +112,56 @@ const Accounting = () => {
 
       {/* Tarjetas de Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="liquid-glass p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
-          <div className="p-3 bg-blue-100 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+        <div className="glass-panel flex items-center gap-4 group">
+          <div className="p-3 rounded-xl group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--gold-light)', color: 'var(--gold-deep)' }}>
             <Package size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Total Activos (Filtro)</p>
-            <p className="text-2xl font-bold">{stats.count}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Activos</p>
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{stats.count}</p>
           </div>
         </div>
 
-        <div className="liquid-glass p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
-          <div className="p-3 bg-green-100 text-green-600 rounded-xl group-hover:scale-110 transition-transform">
+        <div className="glass-panel flex items-center gap-4 group">
+          <div className="p-3 bg-green-100 text-green-700 rounded-xl group-hover:scale-110 transition-transform">
             <DollarSign size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Precio Compra Total</p>
-            <p className="text-xl font-bold">{formatCOP(stats.totalPurchasePrice)}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Precio Compra</p>
+            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatCOP(stats.totalPurchasePrice)}</p>
           </div>
         </div>
 
-        <div className="liquid-glass p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
-          <div className="p-3 bg-purple-100 text-purple-600 rounded-xl group-hover:scale-110 transition-transform">
+        <div className="glass-panel flex items-center gap-4 group">
+          <div className="p-3 rounded-xl group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--gold-light)', color: 'var(--gold-deep)' }}>
             <TrendingUp size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Valor Estimado Total</p>
-            <p className="text-xl font-bold">{formatCOP(stats.totalEstimatedValue)}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Valor Estimado</p>
+            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatCOP(stats.totalEstimatedValue)}</p>
           </div>
         </div>
 
-        <div className="liquid-glass p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
+        <div className="glass-panel flex items-center gap-4 group">
           <div className="p-3 bg-amber-100 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
             <AlertCircle size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Sin Valor Registrado</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Sin Valor</p>
             <p className="text-2xl font-bold text-amber-600">{stats.missingValuesCount}</p>
           </div>
         </div>
       </div>
 
       {/* Selector de Tipo de Inventario (Tabs) */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <button
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${inventoryType === 'ALL' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+            inventoryType === 'ALL' 
+              ? 'text-white border-transparent shadow-md' 
+              : 'bg-white/50 border-gray-200 hover:bg-white/80'
+          }`}
+          style={inventoryType === 'ALL' ? { backgroundColor: 'var(--gold)' } : { color: 'var(--text-secondary)' }}
           onClick={() => setInventoryType('ALL')}
         >
           Todos los Tipos
@@ -164,7 +169,12 @@ const Accounting = () => {
         {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
           <button
             key={key}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${inventoryType === key ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap border ${
+              inventoryType === key 
+                ? 'text-white border-transparent shadow-md' 
+                : 'bg-white/50 border-gray-200 hover:bg-white/80'
+            }`}
+            style={inventoryType === key ? { backgroundColor: 'var(--gold)' } : { color: 'var(--text-secondary)' }}
             onClick={() => setInventoryType(key as InventoryType)}
           >
             {label}
@@ -173,24 +183,30 @@ const Accounting = () => {
       </div>
 
       {/* Controles de Filtrado */}
-      <div className="liquid-glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center">
+      <div className="glass-panel flex flex-col md:flex-row gap-4 items-center">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={20} style={{ color: 'var(--text-tertiary)' }} />
           <input
             type="text"
             placeholder="Buscar por código, descripción o marca..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-white/50 border rounded-xl outline-none transition-colors"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--gold)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
           />
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter className="text-gray-400" size={20} />
+          <Filter size={20} style={{ color: 'var(--text-tertiary)' }} />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value as Category | 'ALL')}
-            className="w-full md:w-48 p-2 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full md:w-48 p-2 bg-white/50 border rounded-xl outline-none transition-colors"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--gold)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
           >
             <option value="ALL">Todas las Categorías</option>
             {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
@@ -201,26 +217,26 @@ const Accounting = () => {
       </div>
 
       {/* Tabla de Activos */}
-      <div className="liquid-glass rounded-2xl overflow-hidden">
+      <div className="glass-panel overflow-hidden" style={{ padding: 0 }}>
         {loading ? (
-          <div className="p-8 text-center text-gray-500 flex flex-col items-center">
-            <Activity className="animate-spin text-blue-500 mb-2" size={32} />
+          <div className="p-8 text-center flex flex-col items-center" style={{ color: 'var(--text-secondary)' }}>
+            <Activity className="animate-spin mb-2" size={32} style={{ color: 'var(--gold)' }} />
             <p>Cargando datos contables...</p>
           </div>
         ) : filteredAssets.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center" style={{ color: 'var(--text-secondary)' }}>
             No se encontraron activos con estos filtros.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="p-4 font-semibold text-gray-600 text-sm">Código</th>
-                  <th className="p-4 font-semibold text-gray-600 text-sm">Descripción / Marca</th>
-                  <th className="p-4 font-semibold text-gray-600 text-sm">Categoría</th>
-                  <th className="p-4 font-semibold text-gray-600 text-sm text-right">Precio de Compra</th>
-                  <th className="p-4 font-semibold text-gray-600 text-sm text-right">Valor Estimado</th>
+                <tr className="border-b" style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderColor: 'var(--border-subtle)' }}>
+                  <th className="p-4 font-semibold text-sm" style={{ color: 'var(--ink-secondary)' }}>Código</th>
+                  <th className="p-4 font-semibold text-sm" style={{ color: 'var(--ink-secondary)' }}>Descripción / Marca</th>
+                  <th className="p-4 font-semibold text-sm" style={{ color: 'var(--ink-secondary)' }}>Categoría</th>
+                  <th className="p-4 font-semibold text-sm text-right" style={{ color: 'var(--ink-secondary)' }}>Precio de Compra</th>
+                  <th className="p-4 font-semibold text-sm text-right" style={{ color: 'var(--ink-secondary)' }}>Valor Estimado</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,30 +245,34 @@ const Accounting = () => {
                   return (
                     <tr 
                       key={asset.id} 
-                      className={`border-b border-gray-50 hover:bg-white/40 transition-colors ${noValue ? 'bg-amber-50/30' : ''}`}
+                      className="border-b transition-colors hover:bg-white/40"
+                      style={{ 
+                        borderColor: 'var(--border-subtle)',
+                        backgroundColor: noValue ? 'rgba(255, 193, 7, 0.05)' : 'transparent' 
+                      }}
                     >
-                      <td className="p-4 text-sm font-medium text-gray-700">
+                      <td className="p-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                         {asset.unique_code}
                       </td>
                       <td className="p-4">
-                        <p className="text-sm text-gray-800 line-clamp-1">{asset.description || 'Sin descripción'}</p>
-                        <p className="text-xs text-gray-500">{asset.brand_model || 'Sin marca'}</p>
+                        <p className="text-sm line-clamp-1" style={{ color: 'var(--text-primary)' }}>{asset.description || 'Sin descripción'}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{asset.brand_model || 'Sin marca'}</p>
                       </td>
                       <td className="p-4 text-sm">
                         {asset.category ? (
-                          <span className="px-2 py-1 bg-gray-100 rounded-lg text-gray-600 text-xs font-medium">
+                          <span className="px-2 py-1 bg-gray-100 rounded-lg text-xs font-medium" style={{ color: 'var(--ink-secondary)' }}>
                             {CATEGORY_LABELS[asset.category]}
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-xs">Sin categorizar</span>
+                          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sin categorizar</span>
                         )}
                       </td>
                       <td className="p-4 text-sm text-right font-medium">
-                        {asset.purchase_price ? formatCOP(asset.purchase_price) : <span className="text-gray-300">-</span>}
+                        {asset.purchase_price ? <span style={{ color: 'var(--text-primary)' }}>{formatCOP(asset.purchase_price)}</span> : <span style={{ color: 'var(--border)' }}>-</span>}
                       </td>
                       <td className="p-4 text-sm text-right font-medium">
-                        {asset.estimated_value ? formatCOP(asset.estimated_value) : (
-                           asset.value ? formatCOP(asset.value) : <span className="text-gray-300">-</span>
+                        {asset.estimated_value ? <span style={{ color: 'var(--text-primary)' }}>{formatCOP(asset.estimated_value)}</span> : (
+                           asset.value ? <span style={{ color: 'var(--text-primary)' }}>{formatCOP(asset.value)}</span> : <span style={{ color: 'var(--border)' }}>-</span>
                         )}
                       </td>
                     </tr>

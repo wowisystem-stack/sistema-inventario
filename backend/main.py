@@ -661,11 +661,23 @@ def return_loan(
     if not loan or loan.status != models.LoanStatusEnum.CHECKED_OUT:
         raise HTTPException(status_code=400, detail="Préstamo no válido para devolución")
 
+    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module and loan.asset.module != current_user.module:
+        raise HTTPException(status_code=403, detail="No tiene permisos para devolver activos de este módulo")
+
     loan.status = models.LoanStatusEnum.RETURNED
     loan.return_date = datetime.utcnow()
-    loan.asset.status = models.AssetStatusEnum.AVAILABLE
+    
+    if payload.condition_status and payload.condition_status.upper() in ["DAÑADO", "INCOMPLETO", "PERDIDO"]:
+        loan.asset.status = models.AssetStatusEnum.MAINTENANCE
+    else:
+        loan.asset.status = models.AssetStatusEnum.AVAILABLE
+
     if payload.observations:
-        loan.observations = payload.observations
+        if loan.observations:
+            loan.observations = f"{loan.observations}\n\n[Devolución]: {payload.observations}"
+        else:
+            loan.observations = payload.observations
+            
     if payload.condition_status:
         loan.condition_status = payload.condition_status
 
