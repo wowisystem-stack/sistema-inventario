@@ -76,9 +76,9 @@ const Requests = () => {
     <div className="animate-fade-in">
       <div className="header">
         <div>
-          <h1 className="title">Solicitudes de Empleados</h1>
+          <h1 className="title">Peticiones Generales</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Cada solicitud describe qué necesita la persona — elegí un activo disponible para asignárselo.
+            Revise y asigne activos a las peticiones del personal.
           </p>
         </div>
       </div>

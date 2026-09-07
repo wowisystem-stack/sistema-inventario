@@ -56,7 +56,7 @@ const Approvals = () => {
     <div className="animate-fade-in">
       <div className="header">
         <div>
-          <h1 className="title">{canApprove ? 'Aprobaciones Pendientes' : 'Mis Solicitudes'}</h1>
+          <h1 className="title">{canApprove ? 'Préstamos Pendientes' : 'Mis Solicitudes de Préstamo'}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
             {canApprove ? 'Revise las solicitudes de préstamo enviadas por el personal.' : 'Seguimiento de tus préstamos solicitados.'}
           </p>

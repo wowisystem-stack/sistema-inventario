@@ -1,9 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Search, Pencil, Send, Info } from 'lucide-react';
+import { Search, Pencil, Send, Info, CornerDownLeft } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
-  getLoans, getAssignments, getActivityLogs,
+  getLoans, getAssignments, getActivityLogs, returnAsset,
   type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType,
   type Loan, type Assignment, type ActivityLog
 } from '../api';
@@ -256,13 +256,27 @@ const CatalogView = () => {
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
   const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
 
-  useEffect(() => {
+  const loadAssets = () => {
     setLoading(true);
     getAssets(module)
       .then(setAssets)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAssets();
   }, [module]);
+
+  const handleReturnAsset = async (asset: Asset) => {
+    if (!window.confirm(`¿Estás seguro de registrar la devolución del activo ${asset.unique_code}?`)) return;
+    try {
+      await returnAsset(asset.id, { observations: "Devolución registrada desde panel de control" });
+      loadAssets();
+    } catch (err: any) {
+      alert("Error al devolver: " + err.message);
+    }
+  };
 
   const filteredAssets = assets.filter(a => {
     const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -343,6 +357,16 @@ const CatalogView = () => {
                     >
                       <Info size={16} />
                     </span>
+                  )}
+                  {(asset.status === 'loaned' || asset.status === 'assigned') && (
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '6px' }}
+                      onClick={() => handleReturnAsset(asset)}
+                      title="Registrar Devolución"
+                    >
+                      <CornerDownLeft size={14} />
+                    </button>
                   )}
                   <button
                     className="btn btn-outline"

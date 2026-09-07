@@ -6,6 +6,18 @@ import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import CameraCapture from '../components/CameraCapture';
 
+const COMMON_AREAS = [
+  "Contabilidad - Tesorería",
+  "Gestión Humana",
+  "Bodega",
+  "Comerciales",
+  "Gerencia",
+  "Tecnología",
+  "Creativos",
+  "Producción"
+];
+const ELITE_AREAS = ["Marca Personal", "Pentágono"];
+
 const AddAsset = () => {
   const navigate = useNavigate();
   const { module: currentModule } = useModule();
@@ -24,6 +36,11 @@ const AddAsset = () => {
     observations: '',
     inventory_type: 'activos' as InventoryType,
   });
+  
+  // Set default area based on module if empty
+  if (form.area === '') {
+    setForm(f => ({...f, area: COMMON_AREAS[0]}));
+  }
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
   const [photo, setPhoto] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -184,7 +201,15 @@ const AddAsset = () => {
           </label>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
-            <input className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)} />
+            <select 
+              className="input-field" 
+              value={form.area} 
+              onChange={(e) => update('area', e.target.value)}
+            >
+              <option value="" disabled>Seleccione un área...</option>
+              {COMMON_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+              {assetModule.toLowerCase().includes('elite') && ELITE_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </label>
         </div>
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import { getCachedUser } from './LoginGate';
-import { createWarehouse, updateWarehouse } from '../api';
+import { createWarehouse, updateWarehouse, isMasterAdmin } from '../api';
 import { Layers, Plus, Pencil, Check, X } from 'lucide-react';
 
 interface ModuleSelectorProps {
@@ -14,6 +14,7 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   const { warehouses, reload } = useWarehouses();
   const currentUser = getCachedUser();
   const isAdmin = currentUser?.role === 'admin';
+  const isMaster = isMasterAdmin(currentUser);
 
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -22,7 +23,10 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const accessibleKeys = currentUser && !isAdmin && currentUser.warehouses.length > 0
+  // Igual que en el backend: sin bodegas asignadas = sin restricción (admin
+  // maestro). Con bodegas asignadas, se ve solo esa lista -- aplica a
+  // cualquier rol, incluido un admin acotado a su propia bodega.
+  const accessibleKeys = currentUser && currentUser.warehouses.length > 0
     ? new Set(currentUser.warehouses.map((w) => w.key))
     : null;
 
@@ -134,7 +138,7 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
           );
         })}
 
-        {isAdmin && (
+        {isMaster && (
           adding ? (
             <div className="flex items-center gap-1 px-2 py-1.5">
               <input

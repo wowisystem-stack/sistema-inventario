@@ -16,7 +16,8 @@ import {
   type Asset,
   type Category,
   type InventoryType,
-  INVENTORY_TYPE_LABELS
+  INVENTORY_TYPE_LABELS,
+  isMasterAdmin
 } from '../api';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
@@ -27,7 +28,7 @@ const Accounting = () => {
   const { module } = useModule();
   const { labels } = useWarehouses();
   const currentUser = getCachedUser();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = isMasterAdmin(currentUser);
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);

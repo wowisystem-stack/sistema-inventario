@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
-import { getAssetRequests, getAssets } from '../api';
+import { getAssetRequests, getAssets, isMasterAdmin } from '../api';
 import { useModule } from '../moduleContext';
 import logoIcon from '../assets/logo_elite_nova.png';
 
@@ -20,6 +20,7 @@ const Navbar = () => {
   const isEmpleado = currentUser?.role === 'empleado';
   const isAdmin = currentUser?.role === 'admin';
   const isEncargadoOrAdmin = currentUser?.role === 'encargado' || isAdmin;
+  const isMaster = isMasterAdmin(currentUser);
 
   const [stockAlertCount, setStockAlertCount] = useState(0);
 
@@ -50,8 +51,8 @@ const Navbar = () => {
 
   const navItems = [
     { path: '/dashboard', label: isEmpleado ? 'Mi Solicitud' : 'Catálogo', icon: Package, show: true },
-    { path: '/approvals', label: 'Aprobaciones', icon: ClipboardCheck, show: true },
-    { path: '/requests', label: 'Solicitudes', icon: Inbox, show: isEncargadoOrAdmin },
+    { path: '/approvals', label: 'Préstamos Pendientes', icon: ClipboardCheck, show: true },
+    { path: '/requests', label: 'Peticiones Generales', icon: Inbox, show: isEncargadoOrAdmin },
     { path: '/assets/new', label: 'Nuevo Activo', icon: PlusCircle, show: isEncargadoOrAdmin },
     { path: '/qr-codes', label: 'Códigos QR', icon: Grid3x3, show: isEncargadoOrAdmin },
     { path: '/assets/register-by-code', label: 'Registrar por Código', icon: ScanLine, show: isEncargadoOrAdmin },
@@ -60,9 +61,9 @@ const Navbar = () => {
     { path: '/unused', label: 'Sin Uso', icon: AlertTriangle, show: isEncargadoOrAdmin },
     { path: '/assignments', label: 'Asignaciones', icon: UserCheck, show: isEncargadoOrAdmin },
     { path: '/responsibles', label: 'Personal', icon: Contact, show: isEncargadoOrAdmin },
-    { path: '/accounting', label: 'Contabilidad', icon: Calculator, show: isAdmin },
+    { path: '/accounting', label: 'Contabilidad', icon: Calculator, show: isMaster },
     { path: '/users', label: 'Usuarios', icon: UsersIcon, show: isAdmin },
-    { path: '/logs', label: 'Logs', icon: ScrollText, show: isAdmin },
+    { path: '/logs', label: 'Logs', icon: ScrollText, show: isMaster },
   ].filter(item => item.show);
 
   return (

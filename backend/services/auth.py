@@ -65,10 +65,9 @@ def require_role(*roles: "models.RoleEnum"):
 
 def visible_warehouse_keys(user: "models.User") -> list[str] | None:
     """None = sin restricción (ve/opera sobre todas las bodegas).
-    Lista = solo esas bodegas. Un usuario sin bodegas asignadas también
-    queda sin restricción, igual que el viejo `module IS NULL`."""
-    if user.role == models.RoleEnum.ADMIN:
-        return None
+    Lista = solo esas bodegas. Aplica igual para cualquier rol: un usuario
+    sin bodegas asignadas queda sin restricción (así es como un admin
+    "maestro" se distingue de un admin acotado a su(s) bodega(s))."""
     keys = [w.key for w in user.warehouses]
     return keys or None
 
@@ -77,3 +76,19 @@ def can_access_warehouse(user: "models.User", warehouse_key: str | None) -> bool
     """Chequeo puntual para un asset/loan/request concreto o un query param."""
     allowed = visible_warehouse_keys(user)
     return allowed is None or warehouse_key is None or warehouse_key in allowed
+
+
+def is_master_admin(user: "models.User") -> bool:
+    """Admin maestro = rol admin sin bodegas asignadas (ve/gestiona todo).
+    Un admin CON bodegas asignadas queda acotado a esas bodegas, igual que
+    un encargado, pero conserva las acciones de nivel admin dentro de ellas."""
+    return user.role == models.RoleEnum.ADMIN and not user.warehouses
+
+
+def require_master_admin():
+    def dependency(current_user: "models.User" = Depends(get_current_user)) -> "models.User":
+        if not is_master_admin(current_user):
+            raise HTTPException(status_code=403, detail="Esta acción es exclusiva del administrador maestro")
+        return current_user
+
+    return dependency

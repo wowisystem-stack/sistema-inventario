@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { updateUser, getRolePermissions, ROLE_LABELS, type User, type Role } from '../api';
+import { updateUser, getRolePermissions, ROLE_LABELS, isMasterAdmin, type User, type Role } from '../api';
 import { useWarehouses } from '../warehouseContext';
+import { getCachedUser } from './LoginGate';
 
 interface UserEditModalProps {
   user: User;
@@ -12,6 +13,11 @@ interface UserEditModalProps {
 
 const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
   const { warehouses } = useWarehouses();
+  const actingUser = getCachedUser();
+  const isMaster = isMasterAdmin(actingUser);
+  const ownKeys = new Set((actingUser?.warehouses ?? []).map((w) => w.key));
+  const assignableWarehouses = isMaster ? warehouses : warehouses.filter((w) => ownKeys.has(w.key));
+  const assignableRoles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => isMaster || r !== 'admin');
   const [warehouseKeys, setWarehouseKeys] = useState<string[]>(user.warehouses.map((w) => w.key));
   const [cargo, setCargo] = useState(user.cargo ?? '');
   const [role, setRole] = useState<Role>(user.role);
@@ -63,7 +69,7 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
           <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Rol</div>
             <select className="input-field" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              {(Object.keys(ROLE_LABELS) as Role[]).map(r => (
+              {assignableRoles.map(r => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
               ))}
             </select>
@@ -71,10 +77,10 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
 
           <div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-              Bodegas con acceso (ninguna seleccionada = ve todas)
+              Bodegas con acceso {isMaster ? '(ninguna seleccionada = ve todas)' : ''}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: '8px', padding: '10px' }}>
-              {warehouses.map((w) => (
+              {assignableWarehouses.map((w) => (
                 <label key={w.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
                   <input
                     type="checkbox"

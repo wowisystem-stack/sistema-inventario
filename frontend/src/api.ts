@@ -86,6 +86,11 @@ export interface User {
   cargo: string | null;
 }
 
+/** Admin maestro = rol admin sin bodegas asignadas (ve/gestiona todo).
+ * Un admin CON bodegas asignadas queda acotado a esas bodegas. */
+export const isMasterAdmin = (user: User | null | undefined): boolean =>
+  !!user && user.role === 'admin' && user.warehouses.length === 0;
+
 export interface RolePermission {
   id: number;
   cargo: string;
@@ -345,7 +350,13 @@ export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: st
 export const returnLoan = (loanId: number, details?: { observations?: string; condition_status?: string }) =>
   request<Loan>(`/loans/${loanId}/return`, {
     method: 'POST',
-    body: JSON.stringify(details ?? {}),
+    body: JSON.stringify(details || {}),
+  });
+
+export const returnAsset = (assetId: number, details?: { observations?: string; condition_status?: string }) =>
+  request<Loan>(`/assets/${assetId}/return`, {
+    method: 'POST',
+    body: JSON.stringify(details || {}),
   });
 
 export type AssignmentStatus = 'active' | 'expired' | 'revoked';

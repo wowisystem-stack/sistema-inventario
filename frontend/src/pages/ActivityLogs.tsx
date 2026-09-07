@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { getActivityLogs, type ActivityLog } from '../api';
+import { getActivityLogs, isMasterAdmin, type ActivityLog } from '../api';
 import { Avatar } from '../components/UserProfileCard';
+import { getCachedUser } from '../components/LoginGate';
 
 const PAGE_SIZE = 100;
 
@@ -10,6 +12,7 @@ const ENTITY_LABELS: Record<string, string> = {
 };
 
 const ActivityLogs = () => {
+  const isMaster = isMasterAdmin(getCachedUser());
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,10 @@ const ActivityLogs = () => {
     l.description.toLowerCase().includes(search.toLowerCase()) ||
     (l.actor?.full_name.toLowerCase().includes(search.toLowerCase()) ?? false)
   );
+
+  if (!isMaster) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="animate-fade-in">
