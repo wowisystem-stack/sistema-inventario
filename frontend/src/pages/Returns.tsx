@@ -15,8 +15,11 @@ const Returns = () => {
 
   const load = () => {
     setLoading(true);
-    getLoans('checked_out')
-      .then((loanData) => setLoans(loanData.filter(l => l.asset.module === module)))
+    getLoans()
+      .then((loanData) => setLoans(loanData.filter(l => 
+        l.asset.module === module && 
+        (l.status === 'checked_out' || l.status === 'approved')
+      )))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };

@@ -323,10 +323,10 @@ export const createWarehouse = (payload: { key: string; name: string }) =>
 export const updateWarehouse = (id: number, payload: Partial<{ name: string; is_active: boolean }>) =>
   request<Warehouse>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 
-export const approveLoan = (loanId: number, approved: boolean) =>
+export const approveLoan = (loanId: number, approve: boolean, requiresExitPass?: boolean) =>
   request<Loan>(`/loans/${loanId}/approve`, {
     method: 'POST',
-    body: JSON.stringify({ approved }),
+    body: JSON.stringify({ approved: approve, requires_exit_pass: requiresExitPass }),
   });
 
 export const requestLoan = (assetId: number, reason: string) =>
@@ -419,10 +419,10 @@ export const getMyAssetRequests = () => request<AssetRequest[]>('/asset-requests
 export const getAssetRequests = (statusFilter?: AssetRequestStatus) =>
   request<AssetRequest[]>(`/asset-requests/${statusFilter ? `?status_filter=${statusFilter}` : ''}`);
 
-export const assignAssetRequest = (requestId: number, assetId: number, notes?: string) =>
+export const assignAssetRequest = (requestId: number, assetId: number, notes?: string, requiresExitPass?: boolean) =>
   request<AssetRequest>(`/asset-requests/${requestId}/assign`, {
     method: 'POST',
-    body: JSON.stringify({ asset_id: assetId, notes }),
+    body: JSON.stringify({ asset_id: assetId, notes, requires_exit_pass: requiresExitPass }),
   });
 
 export const rejectAssetRequest = (requestId: number, notes?: string) =>

@@ -775,6 +775,7 @@ def approve_loan(
 
     if approval.approved:
         loan.asset.status = models.AssetStatusEnum.LOANED
+        loan.security_authorization = "AUTORIZADO_SALIDA" if approval.requires_exit_pass else "USO_INTERNO"
 
     verb = "aprobó" if approval.approved else "rechazó"
     audit.log_action(db, current_user, f"loan.{loan.status.value}", f"{current_user.full_name} {verb} el préstamo #{loan.id}", entity_type="loan", entity_id=loan.id)
@@ -1062,6 +1063,7 @@ def assign_asset_request(
         reason=asset_request.description,
         status=models.LoanStatusEnum.APPROVED,
         approval_date=datetime.utcnow(),
+        security_authorization="AUTORIZADO_SALIDA" if payload.requires_exit_pass else "USO_INTERNO"
     )
     db.add(new_loan)
     db.flush()

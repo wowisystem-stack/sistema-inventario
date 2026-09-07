@@ -175,6 +175,7 @@ class Loan(LoanBase):
 
 class LoanApproval(BaseModel):
     approved: bool
+    requires_exit_pass: Optional[bool] = None
 
 class LoanReturn(BaseModel):
     observations: Optional[str] = None
@@ -215,6 +216,7 @@ class AssetRequestCreate(BaseModel):
 class AssetRequestAssign(BaseModel):
     asset_id: int
     notes: Optional[str] = None
+    requires_exit_pass: Optional[bool] = None
 
 class AssetRequestReject(BaseModel):
     notes: Optional[str] = None

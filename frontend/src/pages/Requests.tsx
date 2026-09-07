@@ -18,6 +18,7 @@ const Requests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Record<number, string>>({});
+  const [exitPass, setExitPass] = useState<Record<number, boolean>>({});
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   const load = () => {
@@ -51,7 +52,7 @@ const Requests = () => {
     if (!assetId) return;
     setProcessingId(req.id);
     try {
-      await assignAssetRequest(req.id, Number(assetId));
+      await assignAssetRequest(req.id, Number(assetId), undefined, exitPass[req.id] || false);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -155,7 +156,7 @@ const Requests = () => {
                 )}
 
                 <RequestCommentThread requestId={req.id} />
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <select
                     className="input-field"
                     style={{ flex: 1, minWidth: '220px' }}
@@ -169,6 +170,14 @@ const Requests = () => {
                       <option key={a.id} value={a.id}>{a.unique_code} — {a.description}</option>
                     ))}
                   </select>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={exitPass[req.id] || false}
+                      onChange={(e) => setExitPass(prev => ({ ...prev, [req.id]: e.target.checked }))}
+                    />
+                    Requiere boleta de salida
+                  </label>
                   <button
                     className="btn btn-primary"
                     disabled={!selectedAsset[req.id] || processingId === req.id}

@@ -13,6 +13,7 @@ const Approvals = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [exitPass, setExitPass] = useState<Record<number, boolean>>({});
 
   const load = () => {
     setLoading(true);
@@ -27,7 +28,7 @@ const Approvals = () => {
   const handleApproval = async (loanId: number, approve: boolean) => {
     setProcessingId(loanId);
     try {
-      const updated = await approveLoan(loanId, approve);
+      const updated = await approveLoan(loanId, approve, approve ? exitPass[loanId] || false : undefined);
       setLoans(loans.map(l => (l.id === loanId ? updated : l)));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -118,15 +119,25 @@ const Approvals = () => {
                     <X size={18} />
                     Rechazar
                   </button>
-                  <button
-                    className="btn"
-                    style={{ background: 'var(--success-color)', color: 'white' }}
-                    disabled={processingId === loan.id}
-                    onClick={() => handleApproval(loan.id, true)}
-                  >
-                    <Check size={18} />
-                    Aprobar
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={exitPass[loan.id] || false}
+                        onChange={(e) => setExitPass(prev => ({ ...prev, [loan.id]: e.target.checked }))}
+                      />
+                      Requiere boleta de salida
+                    </label>
+                    <button
+                      className="btn"
+                      style={{ background: 'var(--success-color)', color: 'white' }}
+                      disabled={processingId === loan.id}
+                      onClick={() => handleApproval(loan.id, true)}
+                    >
+                      <Check size={18} />
+                      Aprobar
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
