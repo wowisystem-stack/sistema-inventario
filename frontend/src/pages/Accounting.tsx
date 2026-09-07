@@ -22,7 +22,7 @@ import { getCachedUser } from '../components/LoginGate';
 import { Navigate } from 'react-router-dom';
 
 const Accounting = () => {
-  const { currentModule } = useModule();
+  const { module } = useModule();
   const currentUser = getCachedUser();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -36,11 +36,11 @@ const Accounting = () => {
 
   useEffect(() => {
     setLoading(true);
-    getAssets(currentModule)
+    getAssets(module)
       .then(setAssets)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [currentModule]);
+  }, [module]);
 
   // Derivar datos filtrados
   const filteredAssets = useMemo(() => {
@@ -94,7 +94,7 @@ const Accounting = () => {
             Contabilidad y Auditoría
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Resumen financiero de activos en {MODULE_LABELS[currentModule]}
+            Resumen financiero de activos en {MODULE_LABELS[module]}
           </p>
         </div>
       </div>

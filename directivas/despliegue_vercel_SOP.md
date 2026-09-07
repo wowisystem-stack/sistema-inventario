@@ -18,3 +18,4 @@ Desplegar la aplicación (Frontend) en Vercel para permitir su visualización en
 2. **Configuración de Proyecto**: La primera vez, Vercel pide confirmar configuraciones (nombre de proyecto, directorio, etc.). Para evitar pausas, se deben pasar flags como `--yes` o `--confirm`.
 3. **Memoria de Errores**: Todo error detectado actualizará esta sección.
    - **Nota**: No dejar variables sin usar (ej. `error` en un catch). Porque causa el error `TS6133` y falla el build en Vercel por la comprobación estricta de TypeScript. En su lugar, asegurar que el código no tenga variables huérfanas (ej. usando `_error` o vaciando el parámetro).
+   - **Nota**: Extraer exactamente las propiedades definidas en los providers de Context (ej. extraer `module` en vez de `currentModule` en `useModule()`). Porque causa el error `TS2339` (Property does not exist) y fallará el build estricto en Vercel.
