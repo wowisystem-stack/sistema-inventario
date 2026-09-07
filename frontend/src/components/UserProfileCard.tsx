@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, IdCard, Briefcase, Grid3x3 } from 'lucide-react';
 import { MODULE_LABELS, type User } from '../api';
 
@@ -50,7 +51,7 @@ const UserProfileCard = ({ user, subtitle }: UserProfileCardProps) => {
         </div>
       </div>
 
-      {showProfile && (
+      {showProfile && createPortal(
         <div
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
@@ -94,7 +95,8 @@ const UserProfileCard = ({ user, subtitle }: UserProfileCardProps) => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -32,7 +32,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 };
 
 export const MODULE_LABELS: Record<Module, string> = {
-  elite_nutricion: 'Elite Nutrition',
+  elite_nutricion: 'Elite Nova',
   estudio: 'Estudio',
   estadio: 'Estadio',
   futupro: 'Futupro',

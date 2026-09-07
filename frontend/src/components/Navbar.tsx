@@ -5,7 +5,7 @@ import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import { getAssetRequests, getAssets } from '../api';
 import { useModule } from '../moduleContext';
-import logoIcon from '../assets/logo_elite_nutrition_icon.png';
+import logoIcon from '../assets/logo_elite_nova.png';
 
 const Navbar = () => {
   const location = useLocation();
@@ -69,12 +69,12 @@ const Navbar = () => {
       {/* Top row on mobile: Logo and Logout */}
       <div className="flex items-center justify-between w-full md:w-auto">
         <div className="flex items-center gap-3" style={{ flexShrink: 0, marginRight: '8px' }}>
-          <img src={logoIcon} alt="Elite Nutrition" style={{ height: '40px', width: 'auto', display: 'block', flexShrink: 0 }} />
+          <img src={logoIcon} alt="Elite Nova" style={{ height: '40px', width: 'auto', display: 'block', flexShrink: 0 }} />
           <h1
             className="text-lg font-bold m-0 tracking-tight text-[var(--text-primary)] hidden 2xl:block"
             style={{ whiteSpace: 'nowrap' }}
           >
-            Elite Nutrition
+            Elite Nova
           </h1>
         </div>
 

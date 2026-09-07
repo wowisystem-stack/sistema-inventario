@@ -676,13 +676,24 @@ def return_loan(
 
 # --- Endpoints de Asignaciones Temporales Autorizadas (líderes) ---
 @app.get("/assignments/", response_model=List[schemas.Assignment])
-def get_assignments(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
+def get_assignments(
+    status_filter: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
     query = db.query(models.AssetAssignment)
     if status_filter:
         try:
             query = query.filter(models.AssetAssignment.status == models.AssignmentStatusEnum(status_filter))
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de asignación inválido")
+    
+    if current_user.role == models.RoleEnum.EMPLEADO:
+        query = query.filter(models.AssetAssignment.user_id == current_user.id)
+    elif current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
+        # opcional: los encargados solo ven de su modulo, o ven todo. Por ahora solo filtramos al empleado.
+        pass
+
     return query.order_by(models.AssetAssignment.expiration_date.asc()).all()
 
 @app.post("/assignments/", response_model=schemas.Assignment)
@@ -914,7 +925,7 @@ def create_request_comment(
     return comment
 
 
-# --- Endpoints de Auditoría (solo admin) ---
+# --- Endpoints de Auditoría ---
 @app.get("/activity-logs/", response_model=List[schemas.ActivityLog])
 def get_activity_logs(
     entity_type: Optional[str] = None,
@@ -922,9 +933,13 @@ def get_activity_logs(
     limit: int = 100,
     offset: int = 0,
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+    current_user: models.User = Depends(auth_service.get_current_user),
 ):
     query = db.query(models.ActivityLog)
+    
+    if current_user.role != models.RoleEnum.ADMIN:
+        actor_id = current_user.id
+
     if entity_type:
         query = query.filter(models.ActivityLog.entity_type == entity_type)
     if actor_id:

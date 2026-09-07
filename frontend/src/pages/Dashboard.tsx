@@ -3,7 +3,9 @@ import { Search, Pencil, Send, Info } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
-  type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType
+  getLoans, getAssignments, getActivityLogs,
+  type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType,
+  type Loan, type Assignment, type ActivityLog
 } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
@@ -25,8 +27,22 @@ const EmployeeRequestView = () => {
   const [availability, setAvailability] = useState<AssetAvailability | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<'request' | 'assets' | 'history'>('request');
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const currentUser = getCachedUser();
+
   const load = () => {
-    getMyAssetRequests().then(setMyRequests).catch((err) => setError(err.message)).finally(() => setLoading(false));
+    setLoading(true);
+    Promise.all([
+      getMyAssetRequests().then(setMyRequests),
+      getLoans().then(setLoans),
+      getAssignments().then(setAssignments),
+      getActivityLogs({ actor_id: currentUser?.id }).then(setActivityLogs)
+    ])
+    .catch((err) => setError(err.message))
+    .finally(() => setLoading(false));
   };
 
   useEffect(load, []);
@@ -65,73 +81,161 @@ const EmployeeRequestView = () => {
     <div className="animate-fade-in">
       <div className="header">
         <div>
-          <h1 className="title">Solicitar un Activo</h1>
+          <h1 className="title">Panel de Usuario</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Contanos qué necesitás y para qué — el encargado revisa tu pedido y te asigna el activo disponible que corresponda.
+            Gestioná tus solicitudes, activos a cargo y revisá tu historial.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="glass-panel" style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '520px' }}>
-        <label>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo de activo (opcional)</div>
-          <select className="input-field" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
-            <option value="">No estoy seguro / otro</option>
-            {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
-              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-            ))}
-          </select>
-          {category && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <Info size={14} style={{ flexShrink: 0 }} />
-              {checkingAvailability ? (
-                <span>Consultando disponibilidad...</span>
-              ) : availability ? (
-                availability.available_count > 0 ? (
-                  <span>Hay {availability.available_count} disponible{availability.available_count === 1 ? '' : 's'} ahora mismo.</span>
-                ) : availability.busy_count > 0 ? (
-                  <span>
-                    No hay disponibles: {availability.busy_count} en uso
-                    {availability.busy_areas.length > 0 ? ` (${availability.busy_areas.join(', ')})` : ''}.
-                  </span>
-                ) : (
-                  <span>No hay activos registrados de este tipo en el inventario.</span>
-                )
-              ) : null}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <button
+          className={`btn ${activeTab === 'request' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('request')}
+        >
+          Solicitar Activo
+        </button>
+        <button
+          className={`btn ${activeTab === 'assets' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('assets')}
+        >
+          Mis Activos a Cargo
+        </button>
+        <button
+          className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('history')}
+        >
+          Mi Historial
+        </button>
+      </div>
+
+      {activeTab === 'request' && (
+        <div className="animate-fade-in">
+          <form onSubmit={handleSubmit} className="glass-panel" style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '520px' }}>
+            <label>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo de activo (opcional)</div>
+              <select className="input-field" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+                <option value="">No estoy seguro / otro</option>
+                {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+              {category && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <Info size={14} style={{ flexShrink: 0 }} />
+                  {checkingAvailability ? (
+                    <span>Consultando disponibilidad...</span>
+                  ) : availability ? (
+                    availability.available_count > 0 ? (
+                      <span>Hay {availability.available_count} disponible{availability.available_count === 1 ? '' : 's'} ahora mismo.</span>
+                    ) : availability.busy_count > 0 ? (
+                      <span>
+                        No hay disponibles: {availability.busy_count} en uso
+                        {availability.busy_areas.length > 0 ? ` (${availability.busy_areas.join(', ')})` : ''}.
+                      </span>
+                    ) : (
+                      <span>No hay activos registrados de este tipo en el inventario.</span>
+                    )
+                  ) : null}
+                </div>
+              )}
+            </label>
+            <label>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>¿Qué necesitás y para qué?</div>
+              <textarea className="input-field" rows={4} required value={description} onChange={(e) => setDescription(e.target.value)} />
+            </label>
+            {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              <Send size={16} /> {submitting ? 'Enviando...' : 'Enviar solicitud'}
+            </button>
+          </form>
+
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px' }}>Mis solicitudes</h2>
+          {loading ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Cargando...</p>
+          ) : myRequests.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Todavía no enviaste ninguna solicitud.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {myRequests.map((r) => (
+                <div key={r.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{r.description}</div>
+                    </div>
+                    <span className={`badge ${r.status === 'assigned' ? 'badge-available' : r.status === 'rejected' ? 'badge-maintenance' : 'badge-loaned'}`}>
+                      {REQUEST_STATUS_LABELS[r.status]}
+                    </span>
+                  </div>
+                  <RequestCommentThread requestId={r.id} />
+                </div>
+              ))}
             </div>
           )}
-        </label>
-        <label>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>¿Qué necesitás y para qué?</div>
-          <textarea className="input-field" rows={4} required value={description} onChange={(e) => setDescription(e.target.value)} />
-        </label>
-        {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
-          <Send size={16} /> {submitting ? 'Enviando...' : 'Enviar solicitud'}
-        </button>
-      </form>
+        </div>
+      )}
 
-      <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px' }}>Mis solicitudes</h2>
-      {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Cargando...</p>
-      ) : myRequests.length === 0 ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Todavía no enviaste ninguna solicitud.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {myRequests.map((r) => (
-            <div key={r.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{r.description}</div>
+      {activeTab === 'assets' && (
+        <div className="animate-fade-in grid-cards">
+          {loading ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Cargando activos...</p>
+          ) : loans.length === 0 && assignments.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)' }}>No tenés activos asignados ni en préstamo.</p>
+          ) : (
+            <>
+              {assignments.map(a => (
+                <div key={`assign-${a.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600 }}>{a.asset.description}</div>
+                    <span className="badge badge-assigned">Asignación Fija</span>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    Código: {a.asset.unique_code} <br/>
+                    Vence: {new Date(a.expiration_date).toLocaleDateString()} <br/>
+                    {a.notes && <span>Nota: {a.notes}</span>}
+                  </div>
                 </div>
-                <span className={`badge ${r.status === 'assigned' ? 'badge-available' : r.status === 'rejected' ? 'badge-maintenance' : 'badge-loaned'}`}>
-                  {REQUEST_STATUS_LABELS[r.status]}
-                </span>
-              </div>
-              <RequestCommentThread requestId={r.id} />
+              ))}
+              {loans.filter(l => l.status === 'checked_out' || l.status === 'approved').map(l => (
+                <div key={`loan-${l.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600 }}>{l.asset.description}</div>
+                    <span className="badge badge-loaned">Préstamo Activo</span>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    Código: {l.asset.unique_code} <br/>
+                    Aprobado: {l.approval_date ? new Date(l.approval_date).toLocaleDateString() : 'Pendiente'} <br/>
+                    Motivo: {l.reason}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="animate-fade-in">
+          {loading ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Cargando historial...</p>
+          ) : activityLogs.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)' }}>No hay actividad registrada.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {activityLogs.map(log => (
+                <div key={log.id} className="glass-panel" style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--accent-color)' }}>{log.action}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {new Date(log.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-primary)' }}>{log.description}</div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
