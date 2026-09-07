@@ -23,7 +23,7 @@ APP_PASSWORD = os.environ.get("APP_PASSWORD")
 
 def verify_password(x_app_password: Optional[str] = Header(default=None)):
     # Si no hay APP_PASSWORD configurado (ej. desarrollo local), no se exige clave.
-    if APP_PASSWORD and x_app_password != APP_PASSWORD:
+    if APP_PASSWORD and (x_app_password or "").strip() != APP_PASSWORD.strip():
         raise HTTPException(status_code=401, detail="Clave de acceso inválida")
 
 
