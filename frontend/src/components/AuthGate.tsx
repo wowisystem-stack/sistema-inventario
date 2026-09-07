@@ -53,8 +53,8 @@ const AuthGate = ({ children }: AuthGateProps) => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '360px', textAlign: 'center' }}>
-        <img src={logoIcon} alt="Elite Nova" style={{ height: '56px', margin: '0 auto 16px', display: 'block' }} />
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px' }}>Elite Nova</h2>
+        <img src={logoIcon} alt="Sistema de Activos" style={{ height: '56px', margin: '0 auto 16px', display: 'block' }} />
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px' }}>Sistema de Activos</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>
           Ingresá la clave de acceso al sistema de inventario.
         </p>
