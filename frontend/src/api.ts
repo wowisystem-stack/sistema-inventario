@@ -145,7 +145,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export const pingAuth = () => request<User[]>('/users/');
+export const pingAuth = () => request<{status: string}>('/ping-auth');
 
 export const estimateAssetValueWithAI = (photoDataUrl: string) => 
   request<{ description: string, brand_model: string, estimated_price_cop: number | null }>('/api/assets/estimate', {

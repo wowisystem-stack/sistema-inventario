@@ -139,6 +139,14 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
 def get_me(current_user: models.User = Depends(auth_service.get_current_user)):
     return current_user
 
+@app.get("/ping-auth")
+def ping_auth():
+    """
+    Ruta pública (solo protegida por APP_PASSWORD global) para que el frontend 
+    verifique si la clave de acceso general es correcta sin requerir un token JWT.
+    """
+    return {"status": "ok"}
+
 
 # --- Endpoints de Usuarios ---
 def _resolve_warehouses(db: Session, keys: List[str]) -> List["models.Warehouse"]:
