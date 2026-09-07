@@ -90,7 +90,22 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
 
           {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+          {(user as any).digital_signature_url && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                Firma Digital Registrada
+              </div>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                <img 
+                  src={(user as any).digital_signature_url} 
+                  alt="Firma del usuario" 
+                  style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} 
+                />
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar cambios'}

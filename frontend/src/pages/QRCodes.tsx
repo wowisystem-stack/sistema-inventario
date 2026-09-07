@@ -8,6 +8,10 @@ const MODULE_PREFIXES: Record<Module, string> = {
   estudio: 'ES',
   estadio: 'ED',
   futupro: 'FP',
+  junin: 'JN',
+  ee_uu: 'EU',
+  lago_verde: 'LV',
+  unicentro: 'UC',
 };
 
 const QRCodes = () => {

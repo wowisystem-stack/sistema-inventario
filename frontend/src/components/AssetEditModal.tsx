@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { X, Upload, Printer } from 'lucide-react';
-import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, MODULE_LABELS, CATEGORY_LABELS, STATUS_LABELS, type Asset, type Module, type AssetStatus, type Depreciation } from '../api';
+import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, MODULE_LABELS, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 
 interface AssetEditModalProps {
   asset: Asset;
@@ -22,6 +22,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     accessory_2: asset.accessory_2 ?? '',
     accessory_3: asset.accessory_3 ?? '',
     observations: asset.observations ?? '',
+    inventory_type: asset.inventory_type,
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
         accessory_2: form.accessory_2 || undefined,
         accessory_3: form.accessory_3 || undefined,
         observations: form.observations || undefined,
+        inventory_type: form.inventory_type,
       });
       if (photoFile) {
         saved = await uploadAssetPhoto(asset.id, photoFile);
@@ -136,9 +138,20 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <label style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo de Inventario</div>
+              <select className="input-field" value={form.inventory_type} onChange={(e) => update('inventory_type', e.target.value as InventoryType)}>
+                {(Object.keys(INVENTORY_TYPE_LABELS) as InventoryType[]).map((type) => (
+                  <option key={type} value={type}>{INVENTORY_TYPE_LABELS[type]}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
               <input className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)} />
             </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
             <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Responsable</div>
               <input className="input-field" value={form.responsible_name} onChange={(e) => update('responsible_name', e.target.value)} />

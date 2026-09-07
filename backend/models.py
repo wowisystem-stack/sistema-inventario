@@ -27,6 +27,10 @@ class ModuleEnum(enum.Enum):
     ESTUDIO = "estudio"
     ESTADIO = "estadio"
     FUTUPRO = "futupro"
+    JUNIN = "junin"
+    EE_UU = "ee_uu"
+    LAGO_VERDE = "lago_verde"
+    UNICENTRO = "unicentro"
 
 class CategoryEnum(enum.Enum):
     COMPUTADORES = "computadores"
@@ -41,6 +45,11 @@ class CategoryEnum(enum.Enum):
     PROYECTORES = "proyectores"
     CABLES = "cables"
     OTROS = "otros"
+
+class InventoryTypeEnum(enum.Enum):
+    ACTIVOS = "activos"
+    PUBLICITARIO = "publicitario"
+    MUEBLES = "muebles"
 
 class ValueSourceEnum(enum.Enum):
     MANUAL = "manual"
@@ -104,6 +113,7 @@ class Asset(Base):
     appsheet_photo_ref = Column(String, nullable=True)
 
     # Categorización y valorización (Fase 3)
+    inventory_type = Column(Enum(InventoryTypeEnum), default=InventoryTypeEnum.ACTIVOS, index=True)
     category = Column(Enum(CategoryEnum), nullable=True, index=True)
     purchase_price = Column(Float, nullable=True)
     purchase_date = Column(DateTime, nullable=True)

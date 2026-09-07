@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, BellRing, Info } from 'lucide-react';
 import {
   getAssetRequests, assignAssetRequest, rejectAssetRequest, getAssets,
-  CATEGORY_LABELS, type AssetRequest, type Asset,
+  CATEGORY_LABELS, MODULE_LABELS, type AssetRequest, type Asset,
 } from '../api';
 import { useModule } from '../moduleContext';
 import UserProfileCard from '../components/UserProfileCard';
@@ -12,6 +12,7 @@ const Requests = () => {
   const { module } = useModule();
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
+  const [busyAssets, setBusyAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Record<number, string>>({});
@@ -19,10 +20,11 @@ const Requests = () => {
 
   const load = () => {
     setLoading(true);
-    Promise.all([getAssetRequests('pending'), getAssets(module)])
-      .then(([reqs, assets]) => {
+    Promise.all([getAssetRequests('pending'), getAssets(module), getAssets()])
+      .then(([reqs, assets, allAssets]) => {
         setRequests(reqs.filter(r => r.module === module || r.module === null));
         setAvailableAssets(assets.filter(a => a.status === 'available'));
+        setBusyAssets(allAssets.filter(a => a.status === 'assigned' || a.status === 'loaned'));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -34,6 +36,13 @@ const Requests = () => {
     req.category_requested
       ? availableAssets.filter(a => a.category === req.category_requested)
       : availableAssets;
+
+  const inUseFor = (req: AssetRequest) =>
+    req.category_requested
+      ? busyAssets.filter(a => a.category === req.category_requested)
+      : [];
+
+  const requestsWithStock = requests.filter(req => assetsFor(req).length > 0);
 
   const handleAssign = async (req: AssetRequest) => {
     const assetId = selectedAsset[req.id];
@@ -72,6 +81,23 @@ const Requests = () => {
         </div>
       </div>
 
+      {!loading && !error && requestsWithStock.length > 0 && (
+        <div
+          className="glass-panel"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px',
+            background: 'rgba(255, 149, 0, 0.12)', border: '1px solid rgba(255, 149, 0, 0.3)', color: 'var(--warning)',
+          }}
+        >
+          <BellRing size={18} />
+          <span>
+            {requestsWithStock.length === 1
+              ? 'Hay 1 solicitud pendiente que ya tiene un activo disponible para asignar.'
+              : `Hay ${requestsWithStock.length} solicitudes pendientes que ya tienen activos disponibles para asignar.`}
+          </span>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>Cargando...</div>
       ) : error ? (
@@ -84,15 +110,47 @@ const Requests = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {requests.map((req) => {
             const options = assetsFor(req);
+            const hasStock = options.length > 0;
+            const inUse = inUseFor(req);
             return (
-              <div key={req.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div
+                key={req.id}
+                className="glass-panel"
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: '12px',
+                  ...(hasStock ? { border: '1px solid rgba(255, 149, 0, 0.4)' } : {}),
+                }}
+              >
                 <div>
-                  <UserProfileCard
-                    user={req.requester}
-                    subtitle={req.category_requested ? CATEGORY_LABELS[req.category_requested] : undefined}
-                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                    <UserProfileCard
+                      user={req.requester}
+                      subtitle={req.category_requested ? CATEGORY_LABELS[req.category_requested] : undefined}
+                    />
+                    {hasStock && (
+                      <span className="badge" style={{ background: 'rgba(255, 149, 0, 0.15)', color: 'var(--warning)', border: '1px solid rgba(255, 149, 0, 0.2)', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                        <BellRing size={12} /> Ya hay stock
+                      </span>
+                    )}
+                  </div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '8px' }}>{req.description}</div>
                 </div>
+
+                {inUse.length > 0 && (
+                  <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                      <Info size={14} /> Ya hay {inUse.length === 1 ? 'un activo de este tipo' : `${inUse.length} activos de este tipo`} en uso por otras áreas:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
+                      {inUse.map(a => (
+                        <li key={a.id}>
+                          {a.unique_code}{a.module !== req.module ? ` (${MODULE_LABELS[a.module]})` : ''} — {a.area ?? 'área sin registrar'}
+                          {a.responsible_name ? `, responsable: ${a.responsible_name}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <RequestCommentThread requestId={req.id} />
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>

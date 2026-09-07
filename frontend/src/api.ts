@@ -14,7 +14,8 @@ export const STATUS_LABELS: Record<AssetStatus, string> = {
 };
 export type LoanStatus = 'pending' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type Role = 'admin' | 'encargado' | 'salida' | 'empleado';
-export type Module = 'elite_nutricion' | 'estudio' | 'estadio' | 'futupro';
+export type Module = 'elite_nutricion' | 'estudio' | 'estadio' | 'futupro' | 'junin' | 'ee_uu' | 'lago_verde' | 'unicentro';
+export type InventoryType = 'activos' | 'publicitario' | 'muebles';
 export type Category =
   | 'computadores' | 'celulares' | 'tablets' | 'camaras' | 'microfonos'
   | 'audio' | 'tripodes' | 'telefono' | 'impresoras' | 'proyectores' | 'cables' | 'otros';
@@ -35,6 +36,16 @@ export const MODULE_LABELS: Record<Module, string> = {
   estudio: 'Estudio',
   estadio: 'Estadio',
   futupro: 'Futupro',
+  junin: 'Junín',
+  ee_uu: 'EE.UU',
+  lago_verde: 'Lago Verde',
+  unicentro: 'Unicentro',
+};
+
+export const INVENTORY_TYPE_LABELS: Record<InventoryType, string> = {
+  activos: 'Activos',
+  publicitario: 'Inv. Publicitario',
+  muebles: 'Inv. Muebles',
 };
 
 export interface Asset {
@@ -54,6 +65,7 @@ export interface Asset {
   accessory_3: string | null;
   observations: string | null;
   appsheet_photo_ref: string | null;
+  inventory_type: InventoryType;
   category: Category | null;
   purchase_price: number | null;
   purchase_date: string | null;
@@ -130,6 +142,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const pingAuth = () => request<User[]>('/users/');
 
+export const estimateAssetValueWithAI = (photoDataUrl: string) => 
+  request<{ description: string, brand_model: string, estimated_price_cop: number | null }>('/api/assets/estimate', {
+    method: 'POST',
+    body: JSON.stringify({ photo_data_url: photoDataUrl }),
+  });
+
 export interface AuthResponse {
   token: string;
   user: User;
@@ -152,6 +170,15 @@ export const getMe = () => request<User>('/auth/me');
 export const getAssets = (module?: Module) =>
   request<Asset[]>(`/assets/${module ? `?module=${module}` : ''}`);
 
+export interface AssetAvailability {
+  available_count: number;
+  busy_count: number;
+  busy_areas: string[];
+}
+
+export const getAssetAvailability = (category: Category) =>
+  request<AssetAvailability>(`/assets/availability?category=${category}`);
+
 export interface AssetCreateInput {
   unique_code: string;
   description: string;
@@ -164,6 +191,7 @@ export interface AssetCreateInput {
   accessory_2?: string;
   accessory_3?: string;
   observations?: string;
+  inventory_type?: InventoryType;
   category?: Category;
   purchase_price?: number;
   purchase_date?: string;
@@ -212,6 +240,8 @@ export type AssetUpdate = Partial<{
   accessory_2: string;
   accessory_3: string;
   observations: string;
+  inventory_type: InventoryType;
+  category: Category;
   purchase_price: number;
   purchase_date: string;
 }>;

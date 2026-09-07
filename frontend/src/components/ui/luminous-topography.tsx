@@ -321,36 +321,9 @@ function LuminousTopographyBase({
     [seed, depth, density, drift, staticMode, focals],
   );
 
-  // Secondary pointer highlight — writes CSS vars (no per-frame React re-render).
+  // Secondary pointer highlight — disabled to prevent screen flickering/repaint conflicts
   React.useEffect(() => {
-    const el = bgRef.current;
-    if (!el || !interactive || staticMode) return;
-    let raf = 0;
-    let nx = W / 2;
-    let ny = H / 2;
-    const apply = () => {
-      raf = 0;
-      el.style.setProperty("--lt-cx", String(round1(nx)));
-      el.style.setProperty("--lt-cy", String(round1(ny)));
-      el.style.setProperty("--lt-cursor", "1");
-    };
-    const onMove = (e: PointerEvent) => {
-      if (systemReduced) return;
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      nx = ((e.clientX - r.left) / r.width) * W;
-      ny = ((e.clientY - r.top) / r.height) * H;
-      if (!raf) raf = requestAnimationFrame(apply);
-    };
-    const onLeave = () => el.style.setProperty("--lt-cursor", "0");
-    const host = el.parentElement ?? el;
-    host.addEventListener("pointermove", onMove);
-    host.addEventListener("pointerleave", onLeave);
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      host.removeEventListener("pointermove", onMove);
-      host.removeEventListener("pointerleave", onLeave);
-    };
+    // Disabled interactive pointer follow to fix flickering screen issue
   }, [interactive, staticMode, systemReduced]);
 
   const primary = focals[0] ?? { x: W * 0.72, y: H * 0.34 };

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, ModuleEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum
+from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, ModuleEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum, InventoryTypeEnum
 
 class UserBase(BaseModel):
     username: str
@@ -67,6 +67,7 @@ class AssetBase(BaseModel):
     accessory_3: Optional[str] = None
     observations: Optional[str] = None
     appsheet_photo_ref: Optional[str] = None
+    inventory_type: InventoryTypeEnum = InventoryTypeEnum.ACTIVOS
     category: Optional[CategoryEnum] = None
     purchase_price: Optional[float] = None
     purchase_date: Optional[datetime] = None
@@ -86,6 +87,7 @@ class AssetCreate(BaseModel):
     accessory_2: Optional[str] = None
     accessory_3: Optional[str] = None
     observations: Optional[str] = None
+    inventory_type: Optional[InventoryTypeEnum] = None
     category: Optional[CategoryEnum] = None
     purchase_price: Optional[float] = None
     purchase_date: Optional[datetime] = None
@@ -113,6 +115,7 @@ class AssetUpdate(BaseModel):
     accessory_2: Optional[str] = None
     accessory_3: Optional[str] = None
     observations: Optional[str] = None
+    inventory_type: Optional[InventoryTypeEnum] = None
     category: Optional[CategoryEnum] = None
     purchase_price: Optional[float] = None
     purchase_date: Optional[datetime] = None
@@ -211,6 +214,11 @@ class AssetRequest(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AssetAvailability(BaseModel):
+    available_count: int
+    busy_count: int
+    busy_areas: List[str]
 
 class RequestCommentCreate(BaseModel):
     message: str

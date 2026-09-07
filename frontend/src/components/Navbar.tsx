@@ -1,12 +1,16 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
+import { getAssetRequests, getAssets } from '../api';
+import { useModule } from '../moduleContext';
 import logoIcon from '../assets/logo_elite_nutrition_icon.png';
 
 const Navbar = () => {
   const location = useLocation();
   const currentUser = getCachedUser();
+  const { module } = useModule();
 
   const handleLogout = () => {
     clearToken();
@@ -16,6 +20,33 @@ const Navbar = () => {
   const isEmpleado = currentUser?.role === 'empleado';
   const isAdmin = currentUser?.role === 'admin';
   const isEncargadoOrAdmin = currentUser?.role === 'encargado' || isAdmin;
+
+  const [stockAlertCount, setStockAlertCount] = useState(0);
+
+  useEffect(() => {
+    if (!isEncargadoOrAdmin) return;
+    let cancelled = false;
+
+    const check = () => {
+      Promise.all([getAssetRequests('pending'), getAssets()])
+        .then(([reqs, assets]) => {
+          if (cancelled) return;
+          const scoped = reqs.filter(r => r.module === module || r.module === null);
+          const available = assets.filter(a => a.status === 'available');
+          const withStock = scoped.filter(r =>
+            r.category_requested
+              ? available.some(a => a.category === r.category_requested)
+              : available.length > 0
+          );
+          setStockAlertCount(withStock.length);
+        })
+        .catch(() => {});
+    };
+
+    check();
+    const interval = setInterval(check, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [module, isEncargadoOrAdmin]);
 
   const navItems = [
     { path: '/dashboard', label: isEmpleado ? 'Mi Solicitud' : 'Catálogo', icon: Package, show: true },
@@ -75,6 +106,19 @@ const Navbar = () => {
             >
               <Icon size={16} />
               {item.label}
+              {item.path === '/requests' && stockAlertCount > 0 && (
+                <span
+                  style={{
+                    background: isActive ? 'rgba(255,255,255,0.9)' : 'var(--warning)',
+                    color: isActive ? 'var(--gold)' : 'white',
+                    borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
+                    minWidth: '18px', height: '18px', display: 'inline-flex',
+                    alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+                  }}
+                >
+                  {stockAlertCount}
+                </span>
+              )}
             </Link>
           );
         })}

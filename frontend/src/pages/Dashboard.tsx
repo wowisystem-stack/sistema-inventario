@@ -1,9 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Search, Pencil, Send } from 'lucide-react';
+import { Search, Pencil, Send, Info } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
-  createAssetRequest, getMyAssetRequests,
-  type Asset, type Category, type AssetRequest,
+  createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
+  type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType
 } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
@@ -22,12 +22,28 @@ const EmployeeRequestView = () => {
   const [error, setError] = useState<string | null>(null);
   const [myRequests, setMyRequests] = useState<AssetRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [availability, setAvailability] = useState<AssetAvailability | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const load = () => {
     getMyAssetRequests().then(setMyRequests).catch((err) => setError(err.message)).finally(() => setLoading(false));
   };
 
   useEffect(load, []);
+
+  useEffect(() => {
+    if (!category) {
+      setAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingAvailability(true);
+    getAssetAvailability(category)
+      .then((result) => { if (!cancelled) setAvailability(result); })
+      .catch(() => { if (!cancelled) setAvailability(null); })
+      .finally(() => { if (!cancelled) setCheckingAvailability(false); });
+    return () => { cancelled = true; };
+  }, [category]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,6 +81,25 @@ const EmployeeRequestView = () => {
               <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
             ))}
           </select>
+          {category && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <Info size={14} style={{ flexShrink: 0 }} />
+              {checkingAvailability ? (
+                <span>Consultando disponibilidad...</span>
+              ) : availability ? (
+                availability.available_count > 0 ? (
+                  <span>Hay {availability.available_count} disponible{availability.available_count === 1 ? '' : 's'} ahora mismo.</span>
+                ) : availability.busy_count > 0 ? (
+                  <span>
+                    No hay disponibles: {availability.busy_count} en uso
+                    {availability.busy_areas.length > 0 ? ` (${availability.busy_areas.join(', ')})` : ''}.
+                  </span>
+                ) : (
+                  <span>No hay activos registrados de este tipo en el inventario.</span>
+                )
+              ) : null}
+            </div>
+          )}
         </label>
         <label>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>¿Qué necesitás y para qué?</div>
@@ -114,6 +149,7 @@ const CatalogView = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [requestingAsset, setRequestingAsset] = useState<Asset | null>(null);
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
+  const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
 
   useEffect(() => {
     setLoading(true);
@@ -123,12 +159,15 @@ const CatalogView = () => {
       .finally(() => setLoading(false));
   }, [module]);
 
-  const filteredAssets = assets.filter(a =>
-    (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-    (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-  );
+  const filteredAssets = assets.filter(a => {
+    const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    
+    const matchesType = inventoryType === 'ALL' || a.inventory_type === inventoryType;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="animate-fade-in">
@@ -153,6 +192,24 @@ const CatalogView = () => {
         />
       </div>
 
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <button
+          className={`btn ${inventoryType === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setInventoryType('ALL')}
+        >
+          Todos
+        </button>
+        {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            className={`btn ${inventoryType === key ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setInventoryType(key as InventoryType)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
           Cargando activos...
@@ -174,6 +231,14 @@ const CatalogView = () => {
                   <span className={`badge badge-${asset.status}`}>
                     {STATUS_LABELS[asset.status]}
                   </span>
+                  {(asset.status === 'assigned' || asset.status === 'loaned') && asset.responsible_name && (
+                    <span
+                      title={`Lo tiene: ${asset.responsible_name}`}
+                      style={{ display: 'inline-flex', color: 'var(--text-secondary)', cursor: 'help' }}
+                    >
+                      <Info size={16} />
+                    </span>
+                  )}
                   <button
                     className="btn btn-outline"
                     style={{ padding: '6px' }}

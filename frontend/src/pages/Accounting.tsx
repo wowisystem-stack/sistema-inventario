@@ -15,7 +15,9 @@ import {
   CATEGORY_LABELS, 
   type Asset, 
   type Category,
-  MODULE_LABELS
+  type InventoryType,
+  MODULE_LABELS,
+  INVENTORY_TYPE_LABELS
 } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
@@ -33,6 +35,7 @@ const Accounting = () => {
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'ALL'>('ALL');
+  const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
 
   useEffect(() => {
     setLoading(true);
@@ -50,9 +53,10 @@ const Accounting = () => {
         (asset.brand_model?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
         (asset.unique_code.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory = selectedCategory === 'ALL' || asset.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesType = inventoryType === 'ALL' || asset.inventory_type === inventoryType;
+      return matchesSearch && matchesCategory && matchesType;
     });
-  }, [assets, searchQuery, selectedCategory]);
+  }, [assets, searchQuery, selectedCategory, inventoryType]);
 
   // Calcular totales sobre activos filtrados (o sobre totales? Sobre filtrados es más interactivo)
   const stats = useMemo(() => {
@@ -147,6 +151,25 @@ const Accounting = () => {
             <p className="text-2xl font-bold text-amber-600">{stats.missingValuesCount}</p>
           </div>
         </div>
+      </div>
+
+      {/* Selector de Tipo de Inventario (Tabs) */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${inventoryType === 'ALL' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}
+          onClick={() => setInventoryType('ALL')}
+        >
+          Todos los Tipos
+        </button>
+        {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${inventoryType === key ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}
+            onClick={() => setInventoryType(key as InventoryType)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Controles de Filtrado */}

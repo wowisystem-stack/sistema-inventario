@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Package } from 'lucide-react';
-import { createAsset, MODULE_LABELS, type Module, type Asset } from '../api';
+import { createAsset, estimateAssetValueWithAI, MODULE_LABELS, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
 import { useModule } from '../moduleContext';
 import CameraCapture from '../components/CameraCapture';
 
@@ -20,14 +20,37 @@ const AddAsset = () => {
     accessory_2: '',
     accessory_3: '',
     observations: '',
+    inventory_type: 'activos' as InventoryType,
   });
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
   const [photo, setPhoto] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [estimating, setEstimating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdAsset, setCreatedAsset] = useState<Asset | null>(null);
 
   const update = (field: keyof typeof form, value: string) => setForm({ ...form, [field]: value });
+  
+  const handleEstimateWithAI = async () => {
+    if (!photo) return;
+    setEstimating(true);
+    setError(null);
+    try {
+      const estimation = await estimateAssetValueWithAI(photo);
+      // Auto-fill form fields, respecting user choice by not overwriting unless empty or wanted (per user comment, but they said "permitame cambiarlo", meaning we CAN auto-fill and they can change it before submitting)
+      setForm(prev => ({
+        ...prev,
+        description: prev.description || estimation.description || '',
+        brand_model: prev.brand_model || estimation.brand_model || '',
+        purchase_price: estimation.estimated_price_cop ? String(estimation.estimated_price_cop) : prev.purchase_price,
+        purchase_date: new Date().toISOString().split('T')[0], // Today's date
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEstimating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +70,7 @@ const AddAsset = () => {
         accessory_2: form.accessory_2 || undefined,
         accessory_3: form.accessory_3 || undefined,
         observations: form.observations || undefined,
+        inventory_type: form.inventory_type,
         photo_url: photo || undefined,
       });
       setCreatedAsset(newAsset);
@@ -149,9 +173,20 @@ const AddAsset = () => {
 
         <div style={{ display: 'flex', gap: '12px' }}>
           <label style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo de Inventario</div>
+            <select className="input-field" value={form.inventory_type} onChange={(e) => update('inventory_type', e.target.value as InventoryType)}>
+              {(Object.keys(INVENTORY_TYPE_LABELS) as InventoryType[]).map((t) => (
+                <option key={t} value={t}>{INVENTORY_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
             <input className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)} />
           </label>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Responsable</div>
             <input className="input-field" value={form.responsible_name} onChange={(e) => update('responsible_name', e.target.value)} />
@@ -199,6 +234,20 @@ const AddAsset = () => {
           <div style={{ maxWidth: '280px' }}>
             <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="4 / 3" facingMode="environment" />
           </div>
+          
+          {photo && (
+            <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button" 
+                onClick={handleEstimateWithAI} 
+                className="btn btn-outline" 
+                style={{ width: '100%', maxWidth: '280px', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', borderColor: 'var(--gold)', color: 'var(--gold)' }}
+                disabled={estimating}
+              >
+                {estimating ? 'Estimando con IA...' : '✨ Estimar Valor con IA'}
+              </button>
+            </div>
+          )}
         </div>
 
         {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}

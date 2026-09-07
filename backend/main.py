@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 import models, schemas
 from database import engine, get_db
-from services import qr_generator, biometrics, depreciation, auth as auth_service, audit
+from services import qr_generator, biometrics, depreciation, auth as auth_service, audit, ai_estimator
 from services.asset_classifier import classify_asset
 
 load_dotenv()
@@ -340,6 +340,32 @@ def get_assets(
 
     return assets
 
+@app.get("/assets/availability", response_model=schemas.AssetAvailability)
+def get_asset_availability(
+    category: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    try:
+        cat_enum = models.CategoryEnum(category)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Categoría inválida")
+
+    query = db.query(models.Asset).filter(models.Asset.category == cat_enum)
+    if current_user.module:
+        query = query.filter(models.Asset.module == current_user.module)
+    assets = query.all()
+
+    available_count = sum(1 for a in assets if a.status == models.AssetStatusEnum.AVAILABLE)
+    busy = [a for a in assets if a.status in (models.AssetStatusEnum.ASSIGNED, models.AssetStatusEnum.LOANED)]
+    busy_areas = sorted({a.area for a in busy if a.area})
+
+    return schemas.AssetAvailability(
+        available_count=available_count,
+        busy_count=len(busy),
+        busy_areas=busy_areas,
+    )
+
 UNUSED_THRESHOLD_DAYS = 180
 
 @app.get("/assets/unused", response_model=List[dict])
@@ -438,6 +464,28 @@ def get_asset_depreciation(asset_id: int, db: Session = Depends(get_db)):
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
     return depreciation.calculate_depreciation(asset)
+
+@app.post("/assets/{asset_id}/qr")
+def regenerate_qr(asset_id: int, db: Session = Depends(get_db)):
+    asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset no encontrado")
+    
+    asset.qr_data = qr_generator.generate_qr_base64(asset.unique_code)
+    db.commit()
+    return {"message": "QR regenerado", "qr_data": asset.qr_data}
+
+
+class EstimateRequest(schemas.BaseModel):
+    photo_data_url: str
+
+@app.post("/api/assets/estimate")
+def estimate_asset_value(req: EstimateRequest):
+    try:
+        result = ai_estimator.estimate_asset_value(req.photo_data_url)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/assets/verify/{unique_code}", response_model=dict)
 def verify_asset_status(unique_code: str, db: Session = Depends(get_db)):
