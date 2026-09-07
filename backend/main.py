@@ -873,7 +873,7 @@ def return_loan(
     db.refresh(loan)
     return loan
 
-@app.post("/assets/{asset_id}/return", response_model=schemas.Loan)
+@app.post("/assets/{asset_id}/return")
 def return_asset(
     asset_id: int,
     payload: Optional[schemas.LoanReturn] = None,
@@ -893,11 +893,24 @@ def return_asset(
     ).first()
 
     if not loan:
+        # Si no hay préstamo, buscar si hay una asignación activa
+        assignment = db.query(models.AssetAssignment).filter(
+            models.AssetAssignment.asset_id == asset.id,
+            models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+        ).first()
+
+        if assignment:
+            # Revocar la asignación
+            revoke_assignment(assignment.id, db)
+            return {"status": "ok", "message": "Asignación revocada y activo devuelto"}
+
+        # Permitir devolución forzosa si el estado quedó trabado
         if asset.status in (models.AssetStatusEnum.LOANED, models.AssetStatusEnum.ASSIGNED):
             asset.status = models.AssetStatusEnum.AVAILABLE
             db.commit()
-            raise HTTPException(status_code=400, detail="Activo devuelto forzosamente (sin registro de préstamo activo).")
-        raise HTTPException(status_code=400, detail="No hay préstamo activo para este activo.")
+            return {"status": "ok", "message": "Activo devuelto forzosamente (sin registro)"}
+
+        raise HTTPException(status_code=400, detail="No hay préstamo ni asignación activa para este activo.")
 
     return return_loan(loan.id, payload, db, current_user)
 
@@ -1058,6 +1071,8 @@ def assign_asset_request(
     asset_request.reviewed_at = datetime.utcnow()
     asset_request.review_notes = payload.notes
     asset_request.resulting_loan_id = new_loan.id
+
+    asset.status = models.AssetStatusEnum.LOANED
 
     audit.log_action(
         db, current_user, "asset_request.assigned",

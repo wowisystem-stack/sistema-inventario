@@ -12,6 +12,7 @@ import { getCachedUser } from '../components/LoginGate';
 import AssetEditModal from '../components/AssetEditModal';
 import RequestLoanModal from '../components/RequestLoanModal';
 import RequestCommentThread from '../components/RequestCommentThread';
+import ReturnAssetModal from '../components/ReturnAssetModal';
 
 const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente', assigned: 'Asignada', rejected: 'Rechazada',
@@ -252,6 +253,7 @@ const CatalogView = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
   const [requestingAsset, setRequestingAsset] = useState<Asset | null>(null);
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
   const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
@@ -268,11 +270,12 @@ const CatalogView = () => {
     loadAssets();
   }, [module]);
 
-  const handleReturnAsset = async (asset: Asset) => {
-    if (!window.confirm(`¿Estás seguro de registrar la devolución del activo ${asset.unique_code}?`)) return;
+  const handleReturnAssetSubmit = async (details: { observations: string; condition_status: string }) => {
+    if (!returningAsset) return;
     try {
-      await returnAsset(asset.id, { observations: "Devolución registrada desde panel de control" });
+      await returnAsset(returningAsset.id, details);
       loadAssets();
+      setReturningAsset(null);
     } catch (err: any) {
       alert("Error al devolver: " + err.message);
     }
@@ -362,7 +365,7 @@ const CatalogView = () => {
                     <button
                       className="btn btn-outline"
                       style={{ padding: '6px' }}
-                      onClick={() => handleReturnAsset(asset)}
+                      onClick={() => setReturningAsset(asset)}
                       title="Registrar Devolución"
                     >
                       <CornerDownLeft size={14} />
@@ -418,6 +421,14 @@ const CatalogView = () => {
               ? assets.map(a => (a.id === updated.id ? updated : a))
               : assets.filter(a => a.id !== updated.id)
           )}
+        />
+      )}
+
+      {returningAsset && (
+        <ReturnAssetModal
+          asset={returningAsset}
+          onClose={() => setReturningAsset(null)}
+          onSubmit={handleReturnAssetSubmit}
         />
       )}
 
