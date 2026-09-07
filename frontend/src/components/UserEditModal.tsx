@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { updateUser, getRolePermissions, MODULE_LABELS, type User, type Module, type Role } from '../api';
 
@@ -43,12 +44,12 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
     }
   };
 
-  return (
+  const modalContent = (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '24px',
     }}>
-      <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '420px' }}>
+      <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>{user.full_name}</h2>
           <button type="button" onClick={onClose} className="btn btn-outline" style={{ padding: '8px' }}>
@@ -115,6 +116,8 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
       </form>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default UserEditModal;

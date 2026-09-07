@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Package } from 'lucide-react';
 import { requestLoan, type Asset, type Loan } from '../api';
 
@@ -30,13 +31,13 @@ const RequestLoanModal = ({ asset, onClose, onRequested }: RequestLoanModalProps
     }
   };
 
-  return (
+  const modalContent = (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '24px',
       backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)'
     }}>
-      <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '440px' }}>
+      <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Solicitar Préstamo</h2>
           <button type="button" onClick={onClose} className="btn btn-outline" style={{ padding: '8px' }}>
@@ -74,6 +75,8 @@ const RequestLoanModal = ({ asset, onClose, onRequested }: RequestLoanModalProps
       </form>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default RequestLoanModal;

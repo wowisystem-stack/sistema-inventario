@@ -83,8 +83,11 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Navigation Links - horizontally scrollable on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide items-center">
+      {/* Navigation Links - horizontally scrollable on mobile & desktop */}
+      <div 
+        className="flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-1 min-w-0 items-center px-1 hide-scrollbar"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.path);

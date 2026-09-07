@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Upload, Printer } from 'lucide-react';
 import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, MODULE_LABELS, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 
@@ -92,10 +93,10 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     }
   };
 
-  return (
+  const modalContent = (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '24px',
       backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)'
     }}>
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -252,6 +253,8 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
       </form>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AssetEditModal;
