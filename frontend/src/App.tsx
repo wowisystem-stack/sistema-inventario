@@ -17,6 +17,7 @@ import AddAsset from './pages/AddAsset';
 import RegisterByCode from './pages/RegisterByCode';
 import QRCodes from './pages/QRCodes';
 import ActivityLogs from './pages/ActivityLogs';
+import Accounting from './pages/Accounting';
 import ModuleSelector from './components/ModuleSelector';
 import './index.css';
 
@@ -36,6 +37,7 @@ function AppShell() {
           <Route path="/returns" element={<Returns />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/requests" element={<Requests />} />
+          <Route path="/accounting" element={<Accounting />} />
           <Route path="/assets/new" element={<AddAsset />} />
           <Route path="/assets/register-by-code" element={<RegisterByCode />} />
           <Route path="/qr-codes" element={<QRCodes />} />
