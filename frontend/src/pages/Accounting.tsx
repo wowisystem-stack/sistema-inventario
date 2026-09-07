@@ -9,22 +9,23 @@ import {
   Package,
   Activity
 } from 'lucide-react';
-import { 
-  getAssets, 
-  formatCOP, 
-  CATEGORY_LABELS, 
-  type Asset, 
+import {
+  getAssets,
+  formatCOP,
+  CATEGORY_LABELS,
+  type Asset,
   type Category,
   type InventoryType,
-  MODULE_LABELS,
   INVENTORY_TYPE_LABELS
 } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 import { getCachedUser } from '../components/LoginGate';
 import { Navigate } from 'react-router-dom';
 
 const Accounting = () => {
   const { module } = useModule();
+  const { labels } = useWarehouses();
   const currentUser = getCachedUser();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -98,7 +99,7 @@ const Accounting = () => {
             Contabilidad y Auditoría
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-            Resumen financiero de activos en {MODULE_LABELS[module]}
+            Resumen financiero de activos en {labels[module] ?? module}
           </p>
         </div>
       </div>

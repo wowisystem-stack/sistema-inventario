@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { CheckCircle, XCircle, ScanLine } from 'lucide-react';
+import { CheckCircle, XCircle, ScanLine, AlertTriangle } from 'lucide-react';
 import { verifyAsset, type VerificationResult } from '../api';
 
 const Scanner = () => {
@@ -116,6 +116,17 @@ const Scanner = () => {
                       Ver Pase de Salida
                     </button>
                 )}
+              </div>
+            ) : verification.loan_status === 'pending' ? (
+              <div style={{ color: '#f59e0b' }}>
+                <AlertTriangle size={64} style={{ margin: '0 auto 16px' }} />
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px' }}>SOLICITUD PENDIENTE</h2>
+                <div style={{ color: 'var(--text-primary)', marginBottom: '24px' }}>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>{verification.asset_description}</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    <strong style={{ color: 'white' }}>{verification.borrower_name}</strong> ha solicitado este activo, pero la salida <strong>aún no ha sido aprobada</strong> por un encargado.
+                  </p>
+                </div>
               </div>
             ) : (
               <div style={{ color: 'var(--danger-color)' }}>

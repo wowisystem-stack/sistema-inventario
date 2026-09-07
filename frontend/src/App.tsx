@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import AuthGate from './components/AuthGate';
 import LoginGate, { getCachedUser } from './components/LoginGate';
 import { ModuleProvider } from './moduleContext';
+import { WarehouseProvider } from './warehouseContext';
 import Dashboard from './pages/Dashboard';
 import Scanner from './pages/Scanner';
 import Approvals from './pages/Approvals';
@@ -64,9 +65,11 @@ function App() {
             path="/*"
             element={
               <LoginGate>
-                <ModuleProvider>
-                  <AppShell />
-                </ModuleProvider>
+                <WarehouseProvider>
+                  <ModuleProvider>
+                    <AppShell />
+                  </ModuleProvider>
+                </WarehouseProvider>
               </LoginGate>
             }
           />

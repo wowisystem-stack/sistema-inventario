@@ -1,7 +1,8 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Printer } from 'lucide-react';
-import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, MODULE_LABELS, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
+import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
+import { useWarehouses } from '../warehouseContext';
 
 interface AssetEditModalProps {
   asset: Asset;
@@ -10,6 +11,7 @@ interface AssetEditModalProps {
 }
 
 const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
+  const { warehouses } = useWarehouses();
   const [form, setForm] = useState({
     description: asset.description ?? '',
     brand_model: asset.brand_model ?? '',
@@ -130,8 +132,8 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
             <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Módulo</div>
               <select className="input-field" value={form.module} onChange={(e) => update('module', e.target.value as Module)}>
-                {(Object.keys(MODULE_LABELS) as Module[]).map((m) => (
-                  <option key={m} value={m}>{MODULE_LABELS[m]}</option>
+                {warehouses.map((w) => (
+                  <option key={w.key} value={w.key}>{w.name}</option>
                 ))}
               </select>
             </label>

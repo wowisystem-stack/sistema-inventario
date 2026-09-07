@@ -61,3 +61,19 @@ def require_role(*roles: "models.RoleEnum"):
         return current_user
 
     return dependency
+
+
+def visible_warehouse_keys(user: "models.User") -> list[str] | None:
+    """None = sin restricción (ve/opera sobre todas las bodegas).
+    Lista = solo esas bodegas. Un usuario sin bodegas asignadas también
+    queda sin restricción, igual que el viejo `module IS NULL`."""
+    if user.role == models.RoleEnum.ADMIN:
+        return None
+    keys = [w.key for w in user.warehouses]
+    return keys or None
+
+
+def can_access_warehouse(user: "models.User", warehouse_key: str | None) -> bool:
+    """Chequeo puntual para un asset/loan/request concreto o un query param."""
+    allowed = visible_warehouse_keys(user)
+    return allowed is None or warehouse_key is None or warehouse_key in allowed

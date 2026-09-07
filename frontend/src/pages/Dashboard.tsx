@@ -66,7 +66,8 @@ const EmployeeRequestView = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await createAssetRequest(category || undefined, description);
+      const resolvedModule = currentUser?.warehouses.length === 1 ? currentUser.warehouses[0].key : undefined;
+      await createAssetRequest(category || undefined, description, resolvedModule);
       setDescription('');
       setCategory('');
       load();

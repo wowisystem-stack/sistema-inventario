@@ -1,21 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Search, Printer, Sparkles } from 'lucide-react';
-import { getAssets, batchGenerateAssets, MODULE_LABELS, type Asset, type Module } from '../api';
+import { getAssets, batchGenerateAssets, type Asset, type Module } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 
-const MODULE_PREFIXES: Record<Module, string> = {
-  elite_nutricion: 'EN',
-  estudio: 'ES',
-  estadio: 'ED',
-  futupro: 'FP',
-  junin: 'JN',
-  ee_uu: 'EU',
-  lago_verde: 'LV',
-  unicentro: 'UC',
-};
+const suggestPrefix = (key: string): string => key.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'AA';
 
 const QRCodes = () => {
   const { module } = useModule();
+  const { warehouses } = useWarehouses();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +16,7 @@ const QRCodes = () => {
   const [onlyPending, setOnlyPending] = useState(false);
 
   const [batchModule, setBatchModule] = useState<Module>(module);
-  const [prefix, setPrefix] = useState(MODULE_PREFIXES[module]);
+  const [prefix, setPrefix] = useState(suggestPrefix(module));
   const [quantity, setQuantity] = useState(100);
   const [generating, setGenerating] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -86,11 +79,11 @@ const QRCodes = () => {
               onChange={(e) => {
                 const m = e.target.value as Module;
                 setBatchModule(m);
-                setPrefix(MODULE_PREFIXES[m]);
+                setPrefix(suggestPrefix(m));
               }}
             >
-              {(Object.keys(MODULE_LABELS) as Module[]).map((m) => (
-                <option key={m} value={m}>{MODULE_LABELS[m]}</option>
+              {warehouses.map((w) => (
+                <option key={w.key} value={w.key}>{w.name}</option>
               ))}
             </select>
           </label>

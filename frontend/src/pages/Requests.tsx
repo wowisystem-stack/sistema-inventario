@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { Check, X, BellRing, Info } from 'lucide-react';
 import {
   getAssetRequests, assignAssetRequest, rejectAssetRequest, getAssets,
-  CATEGORY_LABELS, MODULE_LABELS, type AssetRequest, type Asset,
+  CATEGORY_LABELS, type AssetRequest, type Asset,
 } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 import UserProfileCard from '../components/UserProfileCard';
 import RequestCommentThread from '../components/RequestCommentThread';
 
 const Requests = () => {
   const { module } = useModule();
+  const { labels } = useWarehouses();
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [busyAssets, setBusyAssets] = useState<Asset[]>([]);
@@ -144,7 +146,7 @@ const Requests = () => {
                     <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
                       {inUse.map(a => (
                         <li key={a.id}>
-                          {a.unique_code}{a.module !== req.module ? ` (${MODULE_LABELS[a.module]})` : ''} — {a.area ?? 'área sin registrar'}
+                          {a.unique_code}{a.module !== req.module ? ` (${labels[a.module] ?? a.module})` : ''} — {a.area ?? 'área sin registrar'}
                           {a.responsible_name ? `, responsable: ${a.responsible_name}` : ''}
                         </li>
                       ))}

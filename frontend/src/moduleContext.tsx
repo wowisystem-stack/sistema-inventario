@@ -10,13 +10,7 @@ interface ModuleContextValue {
 
 const ModuleContext = createContext<ModuleContextValue | null>(null);
 
-const readStored = (): Module => {
-  const stored = sessionStorage.getItem(STORAGE_KEY);
-  if (stored === 'elite_nutricion' || stored === 'estudio' || stored === 'estadio' || stored === 'futupro') {
-    return stored;
-  }
-  return 'elite_nutricion';
-};
+const readStored = (): Module => sessionStorage.getItem(STORAGE_KEY) || '';
 
 export const ModuleProvider = ({ children }: { children: ReactNode }) => {
   const [module, setModuleState] = useState<Module>(readStored);

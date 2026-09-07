@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Package } from 'lucide-react';
-import { createAsset, estimateAssetValueWithAI, MODULE_LABELS, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
+import { createAsset, estimateAssetValueWithAI, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 import CameraCapture from '../components/CameraCapture';
 
 const AddAsset = () => {
   const navigate = useNavigate();
   const { module: currentModule } = useModule();
+  const { warehouses } = useWarehouses();
   const [form, setForm] = useState({
     unique_code: '',
     description: '',
@@ -154,8 +156,8 @@ const AddAsset = () => {
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Módulo</div>
             <select className="input-field" value={assetModule} onChange={(e) => setAssetModule(e.target.value as Module)}>
-              {(Object.keys(MODULE_LABELS) as Module[]).map((m) => (
-                <option key={m} value={m}>{MODULE_LABELS[m]}</option>
+              {warehouses.map((w) => (
+                <option key={w.key} value={w.key}>{w.name}</option>
               ))}
             </select>
           </label>

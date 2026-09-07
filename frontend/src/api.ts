@@ -14,8 +14,12 @@ export const STATUS_LABELS: Record<AssetStatus, string> = {
 };
 export type LoanStatus = 'pending' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type Role = 'admin' | 'encargado' | 'salida' | 'empleado';
-export type Module = 'elite_nutricion' | 'estudio' | 'estadio' | 'futupro' | 'junin' | 'ee_uu' | 'lago_verde' | 'unicentro';
+export type Module = string;
 export type InventoryType = 'activos' | 'publicitario' | 'muebles';
+
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Administrador', encargado: 'Encargado', salida: 'Personal de Salida', empleado: 'Empleado',
+};
 export type Category =
   | 'computadores' | 'celulares' | 'tablets' | 'camaras' | 'microfonos'
   | 'audio' | 'tripodes' | 'telefono' | 'impresoras' | 'proyectores' | 'cables' | 'otros';
@@ -29,17 +33,6 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   camaras: 'Cámaras', microfonos: 'Micrófonos', audio: 'Audio', tripodes: 'Trípodes',
   telefono: 'Teléfono', impresoras: 'Impresoras', proyectores: 'Proyectores',
   cables: 'Cables', otros: 'Otros',
-};
-
-export const MODULE_LABELS: Record<Module, string> = {
-  elite_nutricion: 'Elite Nova',
-  estudio: 'Estudio',
-  estadio: 'Estadio',
-  futupro: 'Futupro',
-  junin: 'Junín',
-  ee_uu: 'EE.UU',
-  lago_verde: 'Lago Verde',
-  unicentro: 'Unicentro',
 };
 
 export const INVENTORY_TYPE_LABELS: Record<InventoryType, string> = {
@@ -73,6 +66,13 @@ export interface Asset {
   value_source: ValueSource;
 }
 
+export interface Warehouse {
+  id: number;
+  key: string;
+  name: string;
+  is_active: boolean;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -82,7 +82,7 @@ export interface User {
   photo_url: string | null;
   digital_signature_url: string | null;
   role: Role;
-  module: Module | null;
+  warehouses: Warehouse[];
   cargo: string | null;
 }
 
@@ -290,10 +290,33 @@ export const getLoan = (loanId: number) =>
 
 export const getUsers = () => request<User[]>('/users/');
 
-export const updateUser = (userId: number, update: Partial<{ module: Module; cargo: string; role: Role }>) =>
+export const updateUser = (userId: number, update: Partial<{ cargo: string; role: Role; warehouse_keys: string[] }>) =>
   request<User>(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(update) });
 
+export interface UserCreateInput {
+  username: string;
+  full_name: string;
+  email?: string;
+  document_id: string;
+  photo_url?: string;
+  digital_signature_url?: string;
+  role: Role;
+  cargo?: string;
+  warehouse_keys: string[];
+}
+
+export const createUser = (payload: UserCreateInput) =>
+  request<User>('/users/', { method: 'POST', body: JSON.stringify(payload) });
+
 export const getRolePermissions = () => request<RolePermission[]>('/role-permissions/');
+
+export const getWarehouses = () => request<Warehouse[]>('/warehouses/');
+
+export const createWarehouse = (payload: { key: string; name: string }) =>
+  request<Warehouse>('/warehouses/', { method: 'POST', body: JSON.stringify(payload) });
+
+export const updateWarehouse = (id: number, payload: Partial<{ name: string; is_active: boolean }>) =>
+  request<Warehouse>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 
 export const approveLoan = (loanId: number, approved: boolean) =>
   request<Loan>(`/loans/${loanId}/approve`, {
@@ -305,6 +328,12 @@ export const requestLoan = (assetId: number, reason: string) =>
   request<Loan>('/loans/request', {
     method: 'POST',
     body: JSON.stringify({ asset_id: assetId, reason }),
+  });
+
+export const directLoan = (assetId: number, borrowerId: number, reason: string) =>
+  request<Loan>('/loans/direct', {
+    method: 'POST',
+    body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason }),
   });
 
 export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string) =>
@@ -368,10 +397,10 @@ export interface AssetRequest {
   reviewed_by: User | null;
 }
 
-export const createAssetRequest = (categoryRequested: Category | undefined, description: string) =>
+export const createAssetRequest = (categoryRequested: Category | undefined, description: string, module?: string) =>
   request<AssetRequest>('/asset-requests/', {
     method: 'POST',
-    body: JSON.stringify({ category_requested: categoryRequested, description }),
+    body: JSON.stringify({ category_requested: categoryRequested, description, module }),
   });
 
 export const getMyAssetRequests = () => request<AssetRequest[]>('/asset-requests/mine');

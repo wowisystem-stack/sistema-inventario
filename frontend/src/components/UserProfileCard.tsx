@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Mail, IdCard, Briefcase, Grid3x3 } from 'lucide-react';
-import { MODULE_LABELS, type User } from '../api';
+import { ROLE_LABELS, type User } from '../api';
 
 const initials = (fullName: string) =>
   fullName.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('');
@@ -72,7 +72,7 @@ const UserProfileCard = ({ user, subtitle }: UserProfileCardProps) => {
 
             <Avatar user={user} size={100} />
             <h2 style={{ fontSize: '1.3rem', fontWeight: 700, margin: '16px 0 4px' }}>{user.full_name}</h2>
-            <div style={{ color: 'var(--text-secondary)', marginBottom: '20px', textTransform: 'capitalize' }}>{user.role}</div>
+            <div style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>{ROLE_LABELS[user.role]}</div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
@@ -88,9 +88,9 @@ const UserProfileCard = ({ user, subtitle }: UserProfileCardProps) => {
                   <Briefcase size={16} /> {user.cargo}
                 </div>
               )}
-              {user.module && (
+              {user.warehouses.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                  <Grid3x3 size={16} /> {MODULE_LABELS[user.module]}
+                  <Grid3x3 size={16} /> {user.warehouses.map((w) => w.name).join(', ')}
                 </div>
               )}
             </div>

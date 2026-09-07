@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum, Boolean, Table
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -21,16 +21,6 @@ class AssignmentStatusEnum(enum.Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
     REVOKED = "revoked"
-
-class ModuleEnum(enum.Enum):
-    ELITE_NUTRICION = "elite_nutricion"
-    ESTUDIO = "estudio"
-    ESTADIO = "estadio"
-    FUTUPRO = "futupro"
-    JUNIN = "junin"
-    EE_UU = "ee_uu"
-    LAGO_VERDE = "lago_verde"
-    UNICENTRO = "unicentro"
 
 class CategoryEnum(enum.Enum):
     COMPUTADORES = "computadores"
@@ -68,6 +58,27 @@ class RequestStatusEnum(enum.Enum):
     ASSIGNED = "assigned"
     REJECTED = "rejected"
 
+user_warehouses = Table(
+    "user_warehouses",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("warehouse_id", Integer, ForeignKey("warehouses.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Warehouse(Base):
+    """Bodega/módulo administrable en runtime (reemplaza el antiguo ModuleEnum
+    fijo). `key` es el slug inmutable usado como referencia en assets/usuarios;
+    `name` es la etiqueta editable desde el admin."""
+    __tablename__ = "warehouses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -80,7 +91,7 @@ class User(Base):
     digital_signature_url = Column(String, nullable=True)
     role = Column(Enum(RoleEnum), default=RoleEnum.EMPLEADO)
 
-    module = Column(Enum(ModuleEnum), nullable=True)
+    warehouses = relationship("Warehouse", secondary=user_warehouses, backref="users")
     cargo = Column(String, nullable=True, index=True)
 
     password_hash = Column(String, nullable=True)
@@ -100,7 +111,7 @@ class Asset(Base):
     status = Column(Enum(AssetStatusEnum), default=AssetStatusEnum.AVAILABLE)
     qr_data = Column(String, unique=True, index=True)
 
-    module = Column(Enum(ModuleEnum), default=ModuleEnum.ELITE_NUTRICION, nullable=False, index=True)
+    module = Column(String, ForeignKey("warehouses.key"), nullable=False, index=True)
 
     # Campos importados del catálogo maestro de AppSheet (tabla "BD")
     area = Column(String, nullable=True)
@@ -208,7 +219,7 @@ class AssetRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     requester_id = Column(Integer, ForeignKey("users.id"))
-    module = Column(Enum(ModuleEnum), nullable=True)
+    module = Column(String, ForeignKey("warehouses.key"), nullable=True)
     category_requested = Column(Enum(CategoryEnum), nullable=True)
     description = Column(Text)
     status = Column(Enum(RequestStatusEnum), default=RequestStatusEnum.PENDING)

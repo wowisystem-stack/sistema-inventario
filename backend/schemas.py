@@ -1,7 +1,24 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, ModuleEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum, InventoryTypeEnum
+from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum, InventoryTypeEnum
+
+class Warehouse(BaseModel):
+    id: int
+    key: str
+    name: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class WarehouseCreate(BaseModel):
+    key: str
+    name: str
+
+class WarehouseUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class UserBase(BaseModel):
     username: str
@@ -11,21 +28,21 @@ class UserBase(BaseModel):
     photo_url: Optional[str] = None
     digital_signature_url: Optional[str] = None
     role: RoleEnum
-    module: Optional[ModuleEnum] = None
     cargo: Optional[str] = None
 
 class UserCreate(UserBase):
-    pass
+    warehouse_keys: List[str] = []
 
 class User(UserBase):
     id: int
+    warehouses: List[Warehouse] = []
     class Config:
         from_attributes = True
 
 class UserUpdate(BaseModel):
-    module: Optional[ModuleEnum] = None
     cargo: Optional[str] = None
     role: Optional[RoleEnum] = None
+    warehouse_keys: Optional[List[str]] = None
 
 class RegisterRequest(BaseModel):
     full_name: str
@@ -58,7 +75,7 @@ class AssetBase(BaseModel):
     photo_url: Optional[str] = None
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
     qr_data: str
-    module: ModuleEnum = ModuleEnum.ELITE_NUTRICION
+    module: str
     area: Optional[str] = None
     responsible_name: Optional[str] = None
     value: Optional[float] = None
@@ -80,7 +97,7 @@ class AssetCreate(BaseModel):
     brand_model: str
     photo_url: Optional[str] = None
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
-    module: ModuleEnum = ModuleEnum.ELITE_NUTRICION
+    module: str
     area: Optional[str] = None
     responsible_name: Optional[str] = None
     accessory_1: Optional[str] = None
@@ -98,7 +115,7 @@ class Asset(AssetBase):
         from_attributes = True
 
 class AssetBatchGenerate(BaseModel):
-    module: ModuleEnum
+    module: str
     prefix: str
     quantity: int
     start_number: Optional[int] = None
@@ -107,7 +124,7 @@ class AssetUpdate(BaseModel):
     description: Optional[str] = None
     brand_model: Optional[str] = None
     status: Optional[AssetStatusEnum] = None
-    module: Optional[ModuleEnum] = None
+    module: Optional[str] = None
     area: Optional[str] = None
     responsible_name: Optional[str] = None
     value: Optional[float] = None
@@ -127,6 +144,11 @@ class LoanBase(BaseModel):
 
 class LoanCreate(BaseModel):
     asset_id: int
+    reason: str
+
+class DirectLoanCreate(BaseModel):
+    asset_id: int
+    borrower_id: int
     reason: str
 
 class Loan(LoanBase):
@@ -188,6 +210,7 @@ class Assignment(BaseModel):
 class AssetRequestCreate(BaseModel):
     category_requested: Optional[CategoryEnum] = None
     description: str
+    module: Optional[str] = None
 
 class AssetRequestAssign(BaseModel):
     asset_id: int
@@ -199,7 +222,7 @@ class AssetRequestReject(BaseModel):
 class AssetRequest(BaseModel):
     id: int
     requester_id: int
-    module: Optional[ModuleEnum] = None
+    module: Optional[str] = None
     category_requested: Optional[CategoryEnum] = None
     description: str
     status: RequestStatusEnum

@@ -1,23 +1,33 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { updateUser, getRolePermissions, ROLE_LABELS, type User, type Role } from '../api';
+import { createUser, getRolePermissions, ROLE_LABELS, type User, type Role } from '../api';
 import { useWarehouses } from '../warehouseContext';
 
-interface UserEditModalProps {
-  user: User;
+interface UserCreateModalProps {
   onClose: () => void;
-  onSaved: (user: User) => void;
+  onCreated: (user: User) => void;
 }
 
-const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
+const slugifyUsername = (fullName: string): string =>
+  fullName
+    .normalize('NFKD')
+    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
+    .replace(/[^a-zA-Z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .toLowerCase() || 'usuario';
+
+const UserCreateModal = ({ onClose, onCreated }: UserCreateModalProps) => {
   const { warehouses } = useWarehouses();
-  const [warehouseKeys, setWarehouseKeys] = useState<string[]>(user.warehouses.map((w) => w.key));
-  const [cargo, setCargo] = useState(user.cargo ?? '');
-  const [role, setRole] = useState<Role>(user.role);
+  const [fullName, setFullName] = useState('');
+  const [documentId, setDocumentId] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<Role>('empleado');
+  const [cargo, setCargo] = useState('');
+  const [warehouseKeys, setWarehouseKeys] = useState<string[]>([]);
+  const [cargoOptions, setCargoOptions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cargoOptions, setCargoOptions] = useState<string[]>([]);
 
   useEffect(() => {
     getRolePermissions().then((perms) => setCargoOptions(perms.map(p => p.cargo).sort())).catch(() => {});
@@ -32,12 +42,16 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
     setSaving(true);
     setError(null);
     try {
-      const saved = await updateUser(user.id, {
-        warehouse_keys: warehouseKeys,
-        cargo: cargo || undefined,
+      const created = await createUser({
+        username: slugifyUsername(fullName),
+        full_name: fullName,
+        document_id: documentId,
+        email: email || undefined,
         role,
+        cargo: cargo || undefined,
+        warehouse_keys: warehouseKeys,
       });
-      onSaved(saved);
+      onCreated(created);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -53,13 +67,33 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
     }}>
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>{user.full_name}</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Crear usuario</h2>
           <button type="button" onClick={onClose} className="btn btn-outline" style={{ padding: '8px' }}>
             <X size={18} />
           </button>
         </div>
 
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+          Esto crea un perfil pendiente de activación. La persona activa su cuenta registrándose en
+          {' '}<code>/register</code> con este mismo número de documento.
+        </p>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Nombre completo</div>
+            <input className="input-field" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </label>
+
+          <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Documento de identidad</div>
+            <input className="input-field" required value={documentId} onChange={(e) => setDocumentId(e.target.value)} />
+          </label>
+
+          <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Correo electrónico</div>
+            <input className="input-field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+
           <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Rol</div>
             <select className="input-field" value={role} onChange={(e) => setRole(e.target.value as Role)}>
@@ -101,25 +135,10 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
 
           {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
 
-          {user.digital_signature_url && (
-            <div style={{ marginTop: '8px' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Firma Digital Registrada
-              </div>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                <img
-                  src={user.digital_signature_url}
-                  alt="Firma del usuario"
-                  style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
-                />
-              </div>
-            </div>
-          )}
-
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              {saving ? 'Creando...' : 'Crear usuario'}
             </button>
           </div>
         </div>
@@ -130,4 +149,4 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
   return createPortal(modalContent, document.body);
 };
 
-export default UserEditModal;
+export default UserCreateModal;

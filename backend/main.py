@@ -53,15 +53,15 @@ def _slugify_username(name: str) -> str:
 # --- Endpoints de Autenticación ---
 @app.post("/auth/register", response_model=schemas.AuthResponse)
 def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
-    existing_email = db.query(models.User).filter(models.User.email == payload.email).first()
-    if existing_email:
-        raise HTTPException(status_code=400, detail="Ese correo ya tiene una cuenta")
-
-    # Vincular con un perfil ya importado (mismo documento) que aún no tenga cuenta.
+    # Vincular con un perfil ya importado/pre-creado (mismo documento) que aún no tenga cuenta.
     user = db.query(models.User).filter(
         models.User.document_id == payload.document_id,
         models.User.password_hash.is_(None),
     ).first()
+
+    existing_email = db.query(models.User).filter(models.User.email == payload.email).first()
+    if existing_email and (not user or existing_email.id != user.id):
+        raise HTTPException(status_code=400, detail="Ese correo ya tiene una cuenta")
 
     photo_url = payload.photo_url
     if photo_url and photo_url.startswith("data:image"):
@@ -141,6 +141,15 @@ def get_me(current_user: models.User = Depends(auth_service.get_current_user)):
 
 
 # --- Endpoints de Usuarios ---
+def _resolve_warehouses(db: Session, keys: List[str]) -> List["models.Warehouse"]:
+    if not keys:
+        return []
+    found = db.query(models.Warehouse).filter(models.Warehouse.key.in_(keys)).all()
+    if len(found) != len(set(keys)):
+        raise HTTPException(status_code=400, detail="Una o más bodegas seleccionadas no existen")
+    return found
+
+
 @app.post("/users/", response_model=schemas.User)
 def create_user(
     user: schemas.UserCreate,
@@ -151,7 +160,9 @@ def create_user(
     if db_user:
         raise HTTPException(status_code=400, detail="Username ya registrado")
 
-    user_dict = user.dict()
+    warehouses = _resolve_warehouses(db, user.warehouse_keys)
+
+    user_dict = user.dict(exclude={"warehouse_keys"})
     if user_dict.get("photo_url") and user_dict["photo_url"].startswith("data:image"):
         url = upload_base64_image(user_dict["photo_url"], "inventory-assets", "users/photos", f"{user.username}_photo")
         if url: user_dict["photo_url"] = url
@@ -161,6 +172,7 @@ def create_user(
         if url: user_dict["digital_signature_url"] = url
 
     new_user = models.User(**user_dict)
+    new_user.warehouses = warehouses
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -183,7 +195,11 @@ def update_user(
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    for field, value in update.dict(exclude_unset=True).items():
+
+    if update.warehouse_keys is not None:
+        user.warehouses = _resolve_warehouses(db, update.warehouse_keys)
+
+    for field, value in update.dict(exclude_unset=True, exclude={"warehouse_keys"}).items():
         setattr(user, field, value)
     audit.log_action(db, _admin, "user.updated", f"{_admin.full_name} editó al usuario {user.full_name}", entity_type="user", entity_id=user.id)
     db.commit()
@@ -193,6 +209,58 @@ def update_user(
 @app.get("/role-permissions/", response_model=List[schemas.RolePermission])
 def get_role_permissions(db: Session = Depends(get_db)):
     return db.query(models.RolePermission).all()
+
+# --- Endpoints de Bodegas ---
+def _slugify_key(name: str) -> str:
+    import unicodedata
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", normalized).strip("_").lower()
+    return slug or "bodega"
+
+@app.get("/warehouses/", response_model=List[schemas.Warehouse])
+def get_warehouses(
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.get_current_user),
+):
+    return db.query(models.Warehouse).order_by(models.Warehouse.name).all()
+
+@app.post("/warehouses/", response_model=schemas.Warehouse)
+def create_warehouse(
+    payload: schemas.WarehouseCreate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    key = _slugify_key(payload.key)
+    if db.query(models.Warehouse).filter(models.Warehouse.key == key).first():
+        raise HTTPException(status_code=400, detail="Ya existe una bodega con esa clave")
+
+    warehouse = models.Warehouse(key=key, name=payload.name.strip())
+    db.add(warehouse)
+    db.commit()
+    db.refresh(warehouse)
+
+    audit.log_action(db, _admin, "warehouse.created", f"{_admin.full_name} creó la bodega {warehouse.name}", entity_type="warehouse", entity_id=warehouse.id)
+    db.commit()
+    return warehouse
+
+@app.put("/warehouses/{warehouse_id}", response_model=schemas.Warehouse)
+def update_warehouse(
+    warehouse_id: int,
+    payload: schemas.WarehouseUpdate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    warehouse = db.query(models.Warehouse).filter(models.Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Bodega no encontrada")
+
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(warehouse, field, value)
+
+    audit.log_action(db, _admin, "warehouse.updated", f"{_admin.full_name} editó la bodega {warehouse.name}", entity_type="warehouse", entity_id=warehouse.id)
+    db.commit()
+    db.refresh(warehouse)
+    return warehouse
 
 # --- Endpoints de Activos ---
 @app.post("/assets/", response_model=schemas.Asset)
@@ -204,6 +272,9 @@ def create_asset(
     db_asset = db.query(models.Asset).filter(models.Asset.unique_code == asset.unique_code).first()
     if db_asset:
         raise HTTPException(status_code=400, detail="Activo ya registrado")
+
+    if _user.role == models.RoleEnum.ENCARGADO and not auth_service.can_access_warehouse(_user, asset.module):
+        raise HTTPException(status_code=403, detail="No podés crear activos en una bodega a la que no tenés acceso")
 
     photo_url = asset.photo_url
     if photo_url and photo_url.startswith("data:image"):
@@ -252,6 +323,9 @@ def batch_generate_assets(
     if payload.quantity < 1 or payload.quantity > 500:
         raise HTTPException(status_code=400, detail="La cantidad debe estar entre 1 y 500")
 
+    if _user.role == models.RoleEnum.ENCARGADO and not auth_service.can_access_warehouse(_user, payload.module):
+        raise HTTPException(status_code=403, detail="No podés generar códigos para una bodega a la que no tenés acceso")
+
     prefix = payload.prefix.strip().upper()
     if not prefix:
         raise HTTPException(status_code=400, detail="El prefijo no puede estar vacío")
@@ -296,7 +370,7 @@ def batch_generate_assets(
 
     audit.log_action(
         db, _user, "asset.batch_generated",
-        f"{_user.full_name} generó {len(created)} códigos con prefijo {prefix} ({payload.module.value})",
+        f"{_user.full_name} generó {len(created)} códigos con prefijo {prefix} ({payload.module})",
         entity_type="asset",
     )
     db.commit()
@@ -323,13 +397,16 @@ def get_assets(
 ):
     if current_user.role == models.RoleEnum.EMPLEADO:
         raise HTTPException(status_code=403, detail="Los empleados no tienen acceso al catálogo de activos")
+    if module and not auth_service.can_access_warehouse(current_user, module):
+        raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
 
     query = db.query(models.Asset)
     if module:
-        try:
-            query = query.filter(models.Asset.module == models.ModuleEnum(module))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Módulo inválido")
+        query = query.filter(models.Asset.module == module)
+    else:
+        allowed = auth_service.visible_warehouse_keys(current_user)
+        if allowed is not None:
+            query = query.filter(models.Asset.module.in_(allowed))
     assets = query.all()
 
     if current_user.role not in (models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO):
@@ -352,8 +429,9 @@ def get_asset_availability(
         raise HTTPException(status_code=400, detail="Categoría inválida")
 
     query = db.query(models.Asset).filter(models.Asset.category == cat_enum)
-    if current_user.module:
-        query = query.filter(models.Asset.module == current_user.module)
+    allowed = auth_service.visible_warehouse_keys(current_user)
+    if allowed is not None:
+        query = query.filter(models.Asset.module.in_(allowed))
     assets = query.all()
 
     available_count = sum(1 for a in assets if a.status == models.AssetStatusEnum.AVAILABLE)
@@ -369,14 +447,22 @@ def get_asset_availability(
 UNUSED_THRESHOLD_DAYS = 180
 
 @app.get("/assets/unused", response_model=List[dict])
-def get_unused_assets(module: Optional[str] = None, db: Session = Depends(get_db)):
+def get_unused_assets(
+    module: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    if module and not auth_service.can_access_warehouse(current_user, module):
+        raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
+
     threshold = datetime.utcnow() - timedelta(days=UNUSED_THRESHOLD_DAYS)
     query = db.query(models.Asset).filter(models.Asset.status == models.AssetStatusEnum.AVAILABLE)
     if module:
-        try:
-            query = query.filter(models.Asset.module == models.ModuleEnum(module))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Módulo inválido")
+        query = query.filter(models.Asset.module == module)
+    else:
+        allowed = auth_service.visible_warehouse_keys(current_user)
+        if allowed is not None:
+            query = query.filter(models.Asset.module.in_(allowed))
 
     results = []
     for asset in query.all():
@@ -400,7 +486,7 @@ def get_unused_assets(module: Optional[str] = None, db: Session = Depends(get_db
             "unique_code": asset.unique_code,
             "description": asset.description,
             "brand_model": asset.brand_model,
-            "module": asset.module.value,
+            "module": asset.module,
             "area": asset.area,
             "days_since_last_use": days_since,
             "estimated_value": asset.estimated_value,
@@ -420,6 +506,12 @@ def update_asset(
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
+
+    if _user.role == models.RoleEnum.ENCARGADO:
+        if not auth_service.can_access_warehouse(_user, asset.module):
+            raise HTTPException(status_code=403, detail="No podés editar activos de esta bodega")
+        if update.module and not auth_service.can_access_warehouse(_user, update.module):
+            raise HTTPException(status_code=403, detail="No podés mover el activo a esa bodega")
 
     for field, value in update.dict(exclude_unset=True).items():
         setattr(asset, field, value)
@@ -502,17 +594,25 @@ def verify_asset_status(unique_code: str, db: Session = Depends(get_db)):
         db.query(models.Loan)
         .filter(
             models.Loan.asset_id == asset.id,
-            models.Loan.status.in_([models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]),
+            models.Loan.status.in_([
+                models.LoanStatusEnum.PENDING,
+                models.LoanStatusEnum.APPROVED, 
+                models.LoanStatusEnum.CHECKED_OUT
+            ]),
         )
         .order_by(models.Loan.request_date.desc())
         .first()
     )
 
+    is_authorized = False
+    if active_loan:
+        is_authorized = active_loan.status in [models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]
+
     return {
         "asset_code": asset.unique_code,
         "asset_description": asset.description,
         "status": asset.status.value,
-        "is_authorized_to_leave": active_loan is not None,
+        "is_authorized_to_leave": is_authorized,
         "loan_status": active_loan.status.value if active_loan else None,
         "loan_id": active_loan.id if active_loan else None,
         "borrower_name": active_loan.borrower.full_name if active_loan else None,
@@ -537,8 +637,10 @@ def get_loans(
 
     if current_user.role == models.RoleEnum.EMPLEADO:
         query = query.filter(models.Loan.borrower_id == current_user.id)
-    elif current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
-        query = query.join(models.Asset).filter(models.Asset.module == current_user.module)
+    elif current_user.role == models.RoleEnum.ENCARGADO:
+        allowed = auth_service.visible_warehouse_keys(current_user)
+        if allowed is not None:
+            query = query.join(models.Asset).filter(models.Asset.module.in_(allowed))
 
     return query.order_by(models.Loan.request_date.desc()).all()
 
@@ -571,6 +673,36 @@ def request_loan(
     db.refresh(new_loan)
 
     audit.log_action(db, current_user, "loan.requested", f"{current_user.full_name} solicitó el préstamo del activo {asset.unique_code}", entity_type="loan", entity_id=new_loan.id)
+    db.commit()
+    return new_loan
+
+@app.post("/loans/direct", response_model=schemas.Loan)
+def create_direct_loan(
+    loan_req: schemas.DirectLoanCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
+):
+    # Verificar si el activo está disponible
+    asset = db.query(models.Asset).filter(models.Asset.id == loan_req.asset_id).first()
+    if not asset or asset.status != models.AssetStatusEnum.AVAILABLE:
+        raise HTTPException(status_code=400, detail="Activo no disponible para préstamo")
+
+    new_loan = models.Loan(
+        asset_id=loan_req.asset_id,
+        borrower_id=loan_req.borrower_id,
+        reason=loan_req.reason,
+        status=models.LoanStatusEnum.APPROVED,
+        approver_id=current_user.id,
+        approval_date=datetime.utcnow()
+    )
+    db.add(new_loan)
+    db.commit()
+    db.refresh(new_loan)
+
+    borrower = db.query(models.User).filter(models.User.id == loan_req.borrower_id).first()
+    borrower_name = borrower.full_name if borrower else "Usuario"
+
+    audit.log_action(db, current_user, "loan.direct", f"{current_user.full_name} prestó directamente el activo {asset.unique_code} a {borrower_name}", entity_type="loan", entity_id=new_loan.id)
     db.commit()
     return new_loan
 
@@ -661,7 +793,7 @@ def return_loan(
     if not loan or loan.status != models.LoanStatusEnum.CHECKED_OUT:
         raise HTTPException(status_code=400, detail="Préstamo no válido para devolución")
 
-    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module and loan.asset.module != current_user.module:
+    if current_user.role == models.RoleEnum.ENCARGADO and not auth_service.can_access_warehouse(current_user, loan.asset.module):
         raise HTTPException(status_code=403, detail="No tiene permisos para devolver activos de este módulo")
 
     loan.status = models.LoanStatusEnum.RETURNED
@@ -702,9 +834,6 @@ def get_assignments(
     
     if current_user.role == models.RoleEnum.EMPLEADO:
         query = query.filter(models.AssetAssignment.user_id == current_user.id)
-    elif current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
-        # opcional: los encargados solo ven de su modulo, o ven todo. Por ahora solo filtramos al empleado.
-        pass
 
     return query.order_by(models.AssetAssignment.expiration_date.asc()).all()
 
@@ -766,7 +895,7 @@ def create_asset_request(
 ):
     new_request = models.AssetRequest(
         requester_id=current_user.id,
-        module=current_user.module,
+        module=payload.module,
         category_requested=payload.category_requested,
         description=payload.description,
         status=models.RequestStatusEnum.PENDING,
@@ -804,8 +933,10 @@ def get_asset_requests(
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de solicitud inválido")
 
-    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module:
-        query = query.filter(models.AssetRequest.module == current_user.module)
+    if current_user.role == models.RoleEnum.ENCARGADO:
+        allowed = auth_service.visible_warehouse_keys(current_user)
+        if allowed is not None:
+            query = query.filter(models.AssetRequest.module.in_(allowed))
 
     return query.order_by(models.AssetRequest.created_at.desc()).all()
 
@@ -881,7 +1012,7 @@ def _can_access_asset_request(current_user: "models.User", asset_request: "model
         return True
     if current_user.id == asset_request.requester_id:
         return True
-    if current_user.role == models.RoleEnum.ENCARGADO and current_user.module == asset_request.module:
+    if current_user.role == models.RoleEnum.ENCARGADO and auth_service.can_access_warehouse(current_user, asset_request.module):
         return True
     return False
 
