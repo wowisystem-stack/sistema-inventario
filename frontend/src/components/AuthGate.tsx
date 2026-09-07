@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Lock } from 'lucide-react';
 import { pingAuth } from '../api';
 import { setPassword, clearPassword } from '../auth';
+import logoIcon from '../assets/logo_elite_nova.png';
 
 interface AuthGateProps {
   children: ReactNode;
@@ -53,7 +53,7 @@ const AuthGate = ({ children }: AuthGateProps) => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '360px', textAlign: 'center' }}>
-        <Lock size={32} style={{ margin: '0 auto 16px', color: 'var(--accent-color)' }} />
+        <img src={logoIcon} alt="Elite Nova" style={{ height: '56px', margin: '0 auto 16px', display: 'block' }} />
         <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px' }}>Elite Nova</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>
           Ingresá la clave de acceso al sistema de inventario.

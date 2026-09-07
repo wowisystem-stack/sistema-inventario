@@ -70,12 +70,6 @@ const Navbar = () => {
       <div className="flex items-center justify-between w-full md:w-auto">
         <div className="flex items-center gap-3" style={{ flexShrink: 0, marginRight: '8px' }}>
           <img src={logoIcon} alt="Elite Nova" style={{ height: '40px', width: 'auto', display: 'block', flexShrink: 0 }} />
-          <h1
-            className="text-lg font-bold m-0 tracking-tight text-[var(--text-primary)] hidden 2xl:block"
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            Elite Nova
-          </h1>
         </div>
 
         {currentUser && (
