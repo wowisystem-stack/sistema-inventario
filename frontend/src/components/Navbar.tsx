@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import { getAssetRequests, getAssets } from '../api';
@@ -59,6 +59,7 @@ const Navbar = () => {
     { path: '/returns', label: 'Devoluciones', icon: PackageCheck, show: !isEmpleado },
     { path: '/unused', label: 'Sin Uso', icon: AlertTriangle, show: isEncargadoOrAdmin },
     { path: '/assignments', label: 'Asignaciones', icon: UserCheck, show: isEncargadoOrAdmin },
+    { path: '/responsibles', label: 'Personal', icon: Contact, show: isEncargadoOrAdmin },
     { path: '/accounting', label: 'Contabilidad', icon: Calculator, show: isAdmin },
     { path: '/users', label: 'Usuarios', icon: UsersIcon, show: isAdmin },
     { path: '/logs', label: 'Logs', icon: ScrollText, show: isAdmin },

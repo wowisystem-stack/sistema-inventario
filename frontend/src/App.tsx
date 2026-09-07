@@ -8,6 +8,7 @@ import Scanner from './pages/Scanner';
 import Approvals from './pages/Approvals';
 import UnusedAssets from './pages/UnusedAssets';
 import Assignments from './pages/Assignments';
+import Responsibles from './pages/Responsibles';
 import Users from './pages/Users';
 import Register from './pages/Register';
 import SecurityExitPass from './pages/SecurityExitPass';
@@ -43,6 +44,7 @@ function AppShell() {
           <Route path="/qr-codes" element={<QRCodes />} />
           <Route path="/unused" element={<UnusedAssets />} />
           <Route path="/assignments" element={<Assignments />} />
+          <Route path="/responsibles" element={<Responsibles />} />
           <Route path="/users" element={<Users />} />
           <Route path="/logs" element={<ActivityLogs />} />
           <Route path="/security-exit/:id" element={<SecurityExitPass />} />
