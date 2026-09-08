@@ -1,12 +1,12 @@
 -- =====================================================================
 -- Migración: bodegas dinámicas + acceso multi-bodega por usuario
--- Ejecutar UNA VEZ en el editor SQL de Supabase, en producción.
+-- Ejecutar en el editor SQL de Supabase, en producción.
 --
--- Antes de correrla, confirmá el nombre del tipo enum con:
---   SELECT typname FROM pg_type WHERE typtype = 'e';
--- Se espera "moduleenum" (nombre por defecto de SQLAlchemy, ya que
--- models.py nunca le pasó name= a Enum(ModuleEnum)). Si es distinto,
--- ajustá la línea final DROP TYPE antes de ejecutar.
+-- Esta versión es IDEMPOTENTE / RESUMIBLE: cada paso primero chequea si
+-- ya se aplicó antes de hacer algo, así que es seguro correrla las veces
+-- que haga falta, sin importar en qué punto haya quedado un intento
+-- anterior (útil porque el editor de Supabase no siempre respeta el
+-- BEGIN/COMMIT como una transacción 100% atómica).
 --
 -- IMPORTANTE: el backend nuevo (el que reemplaza ModuleEnum por la
 -- tabla warehouses) tiene que desplegarse AL MISMO TIEMPO que esta
@@ -16,10 +16,6 @@
 BEGIN;
 
 -- 1. Tabla de bodegas
---    (si el backend ya arrancó una vez contra esta base, esta tabla puede
---    ya existir -- creada por SQLAlchemy sin default a nivel de base de
---    datos. Por eso forzamos los defaults acá, y el INSERT de abajo no
---    depende de ellos.)
 CREATE TABLE IF NOT EXISTS warehouses (
     id SERIAL PRIMARY KEY,
     key VARCHAR UNIQUE NOT NULL,
@@ -31,9 +27,9 @@ CREATE INDEX IF NOT EXISTS ix_warehouses_key ON warehouses (key);
 ALTER TABLE warehouses ALTER COLUMN is_active SET DEFAULT TRUE;
 ALTER TABLE warehouses ALTER COLUMN created_at SET DEFAULT NOW();
 
--- 2. Sembrado de las 8 bodegas existentes (corrige "Elite Nova" -> "Elite Nutrition")
---    Valores explícitos de is_active/created_at para no depender de un
---    default que la tabla podría no tener si ya existía de antes.
+-- 2. Sembrado de las 8 bodegas originales (corrige "Elite Nova" -> "Elite Nutrition").
+--    Idempotente por ON CONFLICT: no pisa ni duplica bodegas que ya existan
+--    (incluida cualquier bodega de prueba creada a mano, como "Prueba").
 INSERT INTO warehouses (key, name, is_active, created_at) VALUES
     ('elite_nutricion', 'Elite Nutrition', TRUE, NOW()),
     ('estudio', 'Estudio', TRUE, NOW()),
@@ -52,33 +48,91 @@ CREATE TABLE IF NOT EXISTS user_warehouses (
     PRIMARY KEY (user_id, warehouse_id)
 );
 
--- 4. Migrar el módulo único que cada usuario tenía hoy hacia la nueva tabla
---    (tiene que correr ANTES de borrar la columna users.module)
---    NOTA: SQLAlchemy guarda el NOMBRE del enum en mayúsculas
---    (ej. ELITE_NUTRICION), no el .value en minúsculas -- por eso el lower().
-INSERT INTO user_warehouses (user_id, warehouse_id)
-SELECT u.id, w.id
-FROM users u
-JOIN warehouses w ON w.key = lower(u.module::text)
-WHERE u.module IS NOT NULL
-ON CONFLICT DO NOTHING;
+-- 4. Backfill de users.module -> user_warehouses. Solo corre si la columna
+--    users.module todavía existe (si un intento anterior ya la borró, se
+--    saltea sin error -- ese backfill ya no se puede rehacer, pero las
+--    bodegas quedan asignables a mano desde la pantalla de Usuarios).
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'module'
+    ) THEN
+        INSERT INTO user_warehouses (user_id, warehouse_id)
+        SELECT u.id, w.id
+        FROM users u
+        JOIN warehouses w ON w.key = lower(u.module::text)
+        WHERE u.module IS NOT NULL
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
 
--- 5. assets.module: de enum fijo a texto libre + FK a warehouses.key
-ALTER TABLE assets ALTER COLUMN module TYPE VARCHAR USING lower(module::text);
+-- 5. assets.module: de enum fijo a texto libre + FK a warehouses.key.
+--    Convierte el tipo solo si todavía no es texto, y además normaliza a
+--    minúsculas cualquier valor que haya quedado en mayúsculas por un
+--    intento previo a medio terminar (SQLAlchemy guarda ELITE_NUTRICION,
+--    no elite_nutricion).
+DO $$
+BEGIN
+    IF (
+        SELECT data_type FROM information_schema.columns
+        WHERE table_name = 'assets' AND column_name = 'module'
+    ) <> 'character varying' THEN
+        ALTER TABLE assets ALTER COLUMN module TYPE VARCHAR USING lower(module::text);
+    END IF;
+END $$;
+
+UPDATE assets SET module = lower(module) WHERE module IS NOT NULL AND module <> lower(module);
 ALTER TABLE assets ALTER COLUMN module SET NOT NULL;
-ALTER TABLE assets
-    ADD CONSTRAINT fk_assets_module_warehouse FOREIGN KEY (module) REFERENCES warehouses(key);
 
--- 6. asset_requests.module: mismo cambio, pero sigue siendo nullable
-ALTER TABLE asset_requests ALTER COLUMN module TYPE VARCHAR USING lower(module::text);
-ALTER TABLE asset_requests
-    ADD CONSTRAINT fk_asset_requests_module_warehouse FOREIGN KEY (module) REFERENCES warehouses(key);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_assets_module_warehouse') THEN
+        ALTER TABLE assets ADD CONSTRAINT fk_assets_module_warehouse FOREIGN KEY (module) REFERENCES warehouses(key);
+    END IF;
+END $$;
 
--- 7. Ya migramos users.module a user_warehouses (paso 4): borrar la columna vieja
-ALTER TABLE users DROP COLUMN module;
+-- 6. asset_requests.module: mismo patrón, pero sigue siendo nullable.
+DO $$
+BEGIN
+    IF (
+        SELECT data_type FROM information_schema.columns
+        WHERE table_name = 'asset_requests' AND column_name = 'module'
+    ) <> 'character varying' THEN
+        ALTER TABLE asset_requests ALTER COLUMN module TYPE VARCHAR USING lower(module::text);
+    END IF;
+END $$;
 
--- 8. Borrar el tipo enum de Postgres que quedó sin uso (tiene que ir al final,
---    después de que ninguna columna lo referencie)
+UPDATE asset_requests SET module = lower(module) WHERE module IS NOT NULL AND module <> lower(module);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_asset_requests_module_warehouse') THEN
+        ALTER TABLE asset_requests ADD CONSTRAINT fk_asset_requests_module_warehouse FOREIGN KEY (module) REFERENCES warehouses(key);
+    END IF;
+END $$;
+
+-- 7. Borrar la columna vieja de users, solo si todavía existe.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'module'
+    ) THEN
+        ALTER TABLE users DROP COLUMN module;
+    END IF;
+END $$;
+
+-- 8. Borrar el tipo enum de Postgres que quedó sin uso (tiene que ir al
+--    final, después de que ninguna columna lo referencie). IF EXISTS ya
+--    lo hace seguro de repetir.
 DROP TYPE IF EXISTS moduleenum;
 
 COMMIT;
+
+-- =====================================================================
+-- Verificación (opcional, corré esto después para confirmar):
+--   SELECT key, name, is_active FROM warehouses ORDER BY name;
+--   SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'module'; -- debe dar 0 filas
+--   SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'assets' AND column_name = 'module'; -- debe dar 'character varying'
+-- =====================================================================
