@@ -675,7 +675,10 @@ def verify_asset_status(
 
     is_authorized = False
     if active_loan:
-        is_authorized = active_loan.status in [models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]
+        is_authorized = (
+            active_loan.status in [models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]
+            and active_loan.security_authorization == "AUTORIZADO_SALIDA"
+        )
 
     return {
         "asset_code": asset.unique_code,
@@ -769,13 +772,16 @@ def create_direct_loan(
     if not auth_service.can_access_warehouse(current_user, asset.module):
         raise HTTPException(status_code=403, detail="No podés prestar un activo de una bodega a la que no tenés acceso")
 
+    asset.status = models.AssetStatusEnum.LOANED
+
     new_loan = models.Loan(
         asset_id=loan_req.asset_id,
         borrower_id=loan_req.borrower_id,
         reason=loan_req.reason,
         status=models.LoanStatusEnum.APPROVED,
         approver_id=current_user.id,
-        approval_date=datetime.utcnow()
+        approval_date=datetime.utcnow(),
+        security_authorization="AUTORIZADO_SALIDA" if loan_req.requires_exit_pass else "USO_INTERNO",
     )
     db.add(new_loan)
     db.commit()
@@ -825,6 +831,8 @@ async def checkout_loan(
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
     if not loan or loan.status != models.LoanStatusEnum.APPROVED:
         raise HTTPException(status_code=400, detail="Préstamo no aprobado para salida")
+    if loan.security_authorization != "AUTORIZADO_SALIDA":
+        raise HTTPException(status_code=403, detail="Este préstamo es de uso interno: no tiene autorización de salida")
 
     # Leer bytes
     face_bytes = await face_image.read()
@@ -854,6 +862,8 @@ def checkout_loan_security(loan_id: int, request: SecurityCheckoutRequest, db: S
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
     if not loan or loan.status != models.LoanStatusEnum.APPROVED:
         raise HTTPException(status_code=400, detail="Préstamo no aprobado o no válido para salida de seguridad")
+    if loan.security_authorization != "AUTORIZADO_SALIDA":
+        raise HTTPException(status_code=403, detail="Este préstamo es de uso interno: no tiene autorización de salida")
 
     # Subir firma del guardia (Pentágono)
     sig_url = upload_base64_image(request.security_signature_base64, "inventory-assets", "security/signatures", f"loan_{loan_id}_security_sig")

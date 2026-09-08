@@ -77,6 +77,7 @@ export default function SecurityExitPass() {
   if (error || !loan) return <div className="p-8 text-center text-red-500">Error: {error || "Préstamo no encontrado"}</div>;
 
   const isCheckedOut = loan.status === 'checked_out' || loan.status === 'returned';
+  const requiresExitPass = loan.security_authorization === 'AUTORIZADO_SALIDA';
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -157,12 +158,29 @@ export default function SecurityExitPass() {
                   </span>
                 </div>
               </div>
+
+              <div>
+                <p className="text-sm text-gray-400">Autorización de Salida</p>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold mt-1 inline-block ${
+                  requiresExitPass ? 'bg-green-900/50 text-green-300 border border-green-500' : 'bg-gray-800 text-gray-300 border border-gray-600'
+                }`}>
+                  {requiresExitPass ? 'AUTORIZADO A SALIR' : 'USO INTERNO — SIN SALIDA'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Zona de Validación Pentágono */}
-        {!isCheckedOut && loan.status === 'approved' && (
+        {!isCheckedOut && loan.status === 'approved' && !requiresExitPass && (
+          <div className="mt-8 border-t border-gray-700 pt-8 text-center">
+            <p className="text-gray-400">
+              Este préstamo es de <strong className="text-white">uso interno</strong>: no tiene autorización de salida, así que no requiere pase de seguridad.
+            </p>
+          </div>
+        )}
+
+        {!isCheckedOut && loan.status === 'approved' && requiresExitPass && (
           <div className="mt-8 border-t border-gray-700 pt-8">
             <h2 className="text-2xl font-bold text-center text-white mb-6 flex items-center justify-center">
               <Shield className="w-6 h-6 mr-2 text-[var(--gold)]" />

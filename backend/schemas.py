@@ -150,6 +150,7 @@ class DirectLoanCreate(BaseModel):
     asset_id: int
     borrower_id: int
     reason: str
+    requires_exit_pass: Optional[bool] = None
 
 class Loan(LoanBase):
     id: int

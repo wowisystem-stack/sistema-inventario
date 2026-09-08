@@ -110,6 +110,7 @@ export interface Loan {
   return_date: string | null;
   observations: string | null;
   condition_status: string | null;
+  security_authorization: string | null;
   asset: Asset;
   borrower: User;
   approver: User | null;
@@ -335,10 +336,10 @@ export const requestLoan = (assetId: number, reason: string) =>
     body: JSON.stringify({ asset_id: assetId, reason }),
   });
 
-export const directLoan = (assetId: number, borrowerId: number, reason: string) =>
+export const directLoan = (assetId: number, borrowerId: number, reason: string, requiresExitPass?: boolean) =>
   request<Loan>('/loans/direct', {
     method: 'POST',
-    body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason }),
+    body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason, requires_exit_pass: requiresExitPass }),
   });
 
 export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string) =>

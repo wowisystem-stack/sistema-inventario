@@ -128,6 +128,17 @@ const Scanner = () => {
                   </p>
                 </div>
               </div>
+            ) : verification.loan_status === 'approved' ? (
+              <div style={{ color: 'var(--danger-color)' }}>
+                <XCircle size={64} style={{ margin: '0 auto 16px' }} />
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px' }}>USO INTERNO — SIN SALIDA</h2>
+                <div style={{ color: 'var(--text-primary)', marginBottom: '24px' }}>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>{verification.asset_description}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    Asignado a <strong style={{ color: 'white' }}>{verification.borrower_name}</strong>, pero para uso interno — no tiene autorización para salir del edificio.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div style={{ color: 'var(--danger-color)' }}>
                 <XCircle size={64} style={{ margin: '0 auto 16px' }} />
