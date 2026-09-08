@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Asset } from '../api';
+import type { Asset } from '../api';
 
 interface ReturnAssetModalProps {
   asset: Asset;

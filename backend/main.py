@@ -75,7 +75,10 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
         if uploaded:
             signature_url = uploaded
 
-    generated_password = auth_service.generate_password()
+    # La contraseña por defecto es el propio número de documento: la persona
+    # ya lo aporta al registrarse, y así el equipo administrativo también la
+    # conoce sin necesidad de generarla ni comunicarla aparte.
+    generated_password = payload.document_id
     password_hash = auth_service.hash_password(generated_password)
 
     if user:
@@ -582,6 +585,8 @@ async def upload_asset_photo(
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
+    if not auth_service.can_access_warehouse(_user, asset.module):
+        raise HTTPException(status_code=403, detail="No podés editar la foto de este activo")
 
     if photo.content_type not in ("image/jpeg", "image/png", "image/webp"):
         raise HTTPException(status_code=400, detail="Formato de imagen no soportado (usar JPEG, PNG o WEBP)")
@@ -599,17 +604,29 @@ async def upload_asset_photo(
     return asset
 
 @app.get("/assets/{asset_id}/depreciation", response_model=dict)
-def get_asset_depreciation(asset_id: int, db: Session = Depends(get_db)):
+def get_asset_depreciation(
+    asset_id: int, 
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
+    if not auth_service.can_access_warehouse(_user, asset.module):
+        raise HTTPException(status_code=403, detail="No podés ver la depreciación de este activo")
     return depreciation.calculate_depreciation(asset)
 
 @app.post("/assets/{asset_id}/qr")
-def regenerate_qr(asset_id: int, db: Session = Depends(get_db)):
+def regenerate_qr(
+    asset_id: int, 
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset no encontrado")
+    if not auth_service.can_access_warehouse(_user, asset.module):
+        raise HTTPException(status_code=403, detail="No podés regenerar el QR de este activo")
     
     asset.qr_data = qr_generator.generate_qr_base64(asset.unique_code)
     db.commit()
@@ -628,7 +645,11 @@ def estimate_asset_value(req: EstimateRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/assets/verify/{unique_code}", response_model=dict)
-def verify_asset_status(unique_code: str, db: Session = Depends(get_db)):
+def verify_asset_status(
+    unique_code: str, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO, models.RoleEnum.SALIDA)),
+):
     # Este endpoint lo usará el "Personal de salida" escaneando el QR.
     # El escaneo ocurre ANTES del checkout físico: en ese momento el préstamo
     # ya aprobado todavía está en estado APPROVED (recién pasa a CHECKED_OUT
@@ -693,10 +714,21 @@ def get_loans(
     return query.order_by(models.Loan.request_date.desc()).all()
 
 @app.get("/loans/{loan_id}", response_model=schemas.Loan)
-def get_loan(loan_id: int, db: Session = Depends(get_db)):
+def get_loan(
+    loan_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
     loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Préstamo no encontrado")
+        
+    if current_user.role == models.RoleEnum.EMPLEADO and loan.borrower_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No podés ver préstamos de otros usuarios")
+    elif current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+        if not auth_service.can_access_warehouse(current_user, loan.asset.module):
+            raise HTTPException(status_code=403, detail="No podés ver préstamos de esta bodega")
+            
     return loan
 
 @app.post("/loans/request", response_model=schemas.Loan)
@@ -935,15 +967,21 @@ def get_assignments(
     return query.order_by(models.AssetAssignment.expiration_date.asc()).all()
 
 @app.post("/assignments/", response_model=schemas.Assignment)
-def create_assignment(payload: schemas.AssignmentCreate, db: Session = Depends(get_db)):
+def create_assignment(
+    payload: schemas.AssignmentCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     asset = db.query(models.Asset).filter(models.Asset.id == payload.asset_id).first()
     if not asset or asset.status != models.AssetStatusEnum.AVAILABLE:
         raise HTTPException(status_code=400, detail="Activo no disponible para asignar")
+    if not auth_service.can_access_warehouse(current_user, asset.module):
+        raise HTTPException(status_code=403, detail="No podés asignar activos de esta bodega")
 
     assignment = models.AssetAssignment(
         asset_id=payload.asset_id,
         user_id=payload.user_id,
-        authorized_by_id=payload.authorized_by_id,
+        authorized_by_id=current_user.id,
         expiration_date=datetime.utcnow() + timedelta(days=payload.duration_days),
         notes=payload.notes,
         status=models.AssignmentStatusEnum.ACTIVE,
@@ -959,10 +997,17 @@ def create_assignment(payload: schemas.AssignmentCreate, db: Session = Depends(g
     return assignment
 
 @app.post("/assignments/{assignment_id}/renew", response_model=schemas.Assignment)
-def renew_assignment(assignment_id: int, duration_days: int = 90, db: Session = Depends(get_db)):
+def renew_assignment(
+    assignment_id: int, 
+    duration_days: int = 90, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     assignment = db.query(models.AssetAssignment).filter(models.AssetAssignment.id == assignment_id).first()
     if not assignment or assignment.status != models.AssignmentStatusEnum.ACTIVE:
         raise HTTPException(status_code=400, detail="Asignación no válida para renovar")
+    if not auth_service.can_access_warehouse(current_user, assignment.asset.module):
+        raise HTTPException(status_code=403, detail="No podés renovar asignaciones de esta bodega")
 
     assignment.expiration_date = datetime.utcnow() + timedelta(days=duration_days)
     audit.log_action(db, None, "assignment.renewed", f"Se renovó la asignación #{assignment.id} ({assignment.asset.unique_code} — {assignment.user.full_name})", entity_type="assignment", entity_id=assignment.id)
@@ -971,10 +1016,16 @@ def renew_assignment(assignment_id: int, duration_days: int = 90, db: Session = 
     return assignment
 
 @app.post("/assignments/{assignment_id}/revoke", response_model=schemas.Assignment)
-def revoke_assignment(assignment_id: int, db: Session = Depends(get_db)):
+def revoke_assignment(
+    assignment_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
     assignment = db.query(models.AssetAssignment).filter(models.AssetAssignment.id == assignment_id).first()
     if not assignment or assignment.status != models.AssignmentStatusEnum.ACTIVE:
         raise HTTPException(status_code=400, detail="Asignación no válida para revocar")
+    if not auth_service.can_access_warehouse(current_user, assignment.asset.module):
+        raise HTTPException(status_code=403, detail="No podés revocar asignaciones de esta bodega")
 
     assignment.status = models.AssignmentStatusEnum.REVOKED
     assignment.asset.status = models.AssetStatusEnum.AVAILABLE

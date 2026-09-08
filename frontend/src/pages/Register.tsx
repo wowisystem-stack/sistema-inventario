@@ -111,7 +111,9 @@ export default function Register() {
         <div className="liquid-glass p-8 rounded-2xl text-center shadow-lg border border-slate-200">
           <Check className="w-12 h-12 mx-auto mb-4 text-emerald-600" />
           <h1 className="text-2xl font-bold mb-2 text-slate-900">Perfil creado</h1>
-          <p className="text-slate-600 mb-6">Guardá esta contraseña — no se va a volver a mostrar.</p>
+          <p className="text-slate-600 mb-6">
+            Tu contraseña para iniciar sesión es tu número de cédula. Usala junto con tu correo electrónico.
+          </p>
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 flex items-center justify-between gap-3">
             <code className="text-lg text-emerald-700 break-all">{generatedPassword}</code>
             <button
