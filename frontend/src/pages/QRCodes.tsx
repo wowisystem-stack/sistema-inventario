@@ -129,8 +129,10 @@ const QRCodes = () => {
           {filtered.map((asset) => (
             <div key={asset.id} className="qr-sticker">
               <img src={`data:image/png;base64,${asset.qr_data}`} alt={asset.unique_code} />
-              <div className="qr-sticker-code">{asset.unique_code}</div>
-              <div className="qr-sticker-desc">{asset.description ?? 'Pendiente de registro'}</div>
+              <div className="qr-sticker-text">
+                <div className="qr-sticker-code">{asset.unique_code}</div>
+                <div className="qr-sticker-desc">{asset.description ?? 'Pendiente de registro'}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -159,12 +161,53 @@ const QRCodes = () => {
           .app-layout > nav, .liquid-glass { display: none !important; }
           .page-container { max-width: none; padding: 0; margin: 0; }
           .qr-sticker-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2mm;
+            align-content: flex-start;
           }
           .qr-sticker {
+            width: 3cm;
+            height: 1cm;
+            padding: 1mm;
+            box-sizing: border-box;
+            border: 0.3mm solid #999;
+            border-radius: 0;
             break-inside: avoid;
-            border: 1px solid #ccc;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1mm;
+            text-align: left;
+            overflow: hidden;
+          }
+          .qr-sticker img {
+            width: 8mm;
+            height: 8mm;
+            flex-shrink: 0;
+            display: block;
+          }
+          .qr-sticker-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            min-width: 0;
+          }
+          .qr-sticker-code {
+            font-weight: 700;
+            font-size: 5pt;
+            margin-top: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .qr-sticker-desc {
+            font-size: 4pt;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
         }
       `}</style>

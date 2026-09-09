@@ -102,23 +102,64 @@ const AddAsset = () => {
 
   const handlePrintQR = () => {
     if (!createdAsset) return;
-    const printWindow = window.open('', '', 'width=400,height=400');
+    const printWindow = window.open('', '', 'width=200,height=100');
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
             <title>QR - ${createdAsset.unique_code}</title>
             <style>
-              body { font-family: sans-serif; text-align: center; padding: 20px; }
-              img { width: 200px; height: 200px; margin-bottom: 10px; }
-              h2 { margin: 0; font-size: 1.2rem; }
-              p { margin: 5px 0 0; color: #555; font-size: 0.9rem; }
+              @page { size: 3cm 1cm; margin: 0; }
+              * { box-sizing: border-box; }
+              body {
+                width: 3cm;
+                height: 1cm;
+                margin: 0;
+                padding: 1mm;
+                font-family: sans-serif;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 1mm;
+                overflow: hidden;
+              }
+              img {
+                width: 8mm;
+                height: 8mm;
+                flex-shrink: 0;
+                display: block;
+              }
+              .text-block {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                overflow: hidden;
+                min-width: 0;
+              }
+              h2 {
+                margin: 0;
+                font-size: 5pt;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              p {
+                margin: 0;
+                font-size: 4pt;
+                color: #555;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
             </style>
           </head>
           <body onload="window.print(); window.close();">
             <img src="data:image/png;base64,${createdAsset.qr_data}" />
-            <h2>${createdAsset.unique_code}</h2>
-            <p>${createdAsset.description}</p>
+            <div class="text-block">
+              <h2>${createdAsset.unique_code}</h2>
+              <p>${createdAsset.description}</p>
+            </div>
           </body>
         </html>
       `);
