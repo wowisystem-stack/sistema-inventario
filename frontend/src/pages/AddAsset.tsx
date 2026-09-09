@@ -102,70 +102,79 @@ const AddAsset = () => {
 
   const handlePrintQR = () => {
     if (!createdAsset) return;
-    const printWindow = window.open('', '', 'width=200,height=100');
+    const isFutu = createdAsset.module.toLowerCase().includes('futu');
+    const logoSrc = isFutu
+      ? `${window.location.origin}/logo_futupro.png`
+      : `${window.location.origin}/logo_elite_nova_icon.png`;
+    const accent = isFutu ? '#b8960c' : '#1e3a6e';
+
+    const printWindow = window.open('', '', 'width=400,height=160');
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
             <title>QR - ${createdAsset.unique_code}</title>
             <style>
-              @page { size: 3cm 1cm; margin: 0; }
-              * { box-sizing: border-box; }
+              @page { size: 5cm 1.5cm; margin: 0; }
+              * { box-sizing: border-box; margin: 0; padding: 0; }
               body {
-                width: 3cm;
-                height: 1cm;
-                margin: 0;
-                padding: 1mm;
-                font-family: sans-serif;
+                width: 5cm;
+                height: 1.5cm;
+                padding: 1mm 1.8mm;
+                font-family: 'Courier New', monospace;
                 display: flex;
                 flex-direction: row;
                 align-items: center;
-                gap: 1mm;
+                justify-content: space-between;
+                gap: 1.5mm;
+                background: white;
                 overflow: hidden;
               }
-              img {
-                width: 8mm;
-                height: 8mm;
-                flex-shrink: 0;
-                display: block;
-              }
-              .text-block {
+              .left {
                 display: flex;
                 flex-direction: column;
+                align-items: center;
                 justify-content: center;
+                flex: 1;
+                gap: 1.2mm;
                 overflow: hidden;
-                min-width: 0;
               }
-              h2 {
-                margin: 0;
-                font-size: 5pt;
-                font-weight: 700;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+              .logo { max-width: 32mm; max-height: 6mm; object-fit: contain; display: block; }
+              .divider {
+                width: 100%;
+                border-top: 0.3mm solid ${accent};
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
               }
-              p {
-                margin: 0;
-                font-size: 4pt;
-                color: #555;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+              .dot {
+                width: 1mm; height: 1mm; border-radius: 50%;
+                background: ${accent}; margin-top: -0.5mm; flex-shrink: 0;
               }
+              .code {
+                font-size: 5.5pt; font-weight: 800; letter-spacing: 0.08em;
+                color: ${accent}; text-align: center; white-space: nowrap;
+              }
+              .qr { width: 1.2cm; height: 1.2cm; flex-shrink: 0; display: block; }
             </style>
           </head>
           <body onload="window.print(); window.close();">
-            <img src="data:image/png;base64,${createdAsset.qr_data}" />
-            <div class="text-block">
-              <h2>${createdAsset.unique_code}</h2>
-              <p>${createdAsset.description}</p>
+            <div class="left">
+              <img class="logo" src="${logoSrc}" alt="logo" />
+              <div class="divider">
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="code">${createdAsset.unique_code}</div>
             </div>
+            <img class="qr" src="data:image/png;base64,${createdAsset.qr_data}" alt="QR" />
           </body>
         </html>
       `);
       printWindow.document.close();
     }
   };
+
 
   if (createdAsset) {
     return (
