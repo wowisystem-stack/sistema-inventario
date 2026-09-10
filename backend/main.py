@@ -274,13 +274,17 @@ def delete_user(
         if not (own_keys & target_keys):
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    has_loans = db.query(models.Loan).filter(models.Loan.borrower_id == user.id).first() is not None
-    has_requests = db.query(models.AssetRequest).filter(models.AssetRequest.requester_id == user.id).first() is not None
-    if has_loans or has_requests:
-        raise HTTPException(
-            status_code=400,
-            detail="No se puede borrar: este usuario tiene préstamos o solicitudes en su historial. Desactivalo en su lugar.",
-        )
+    # Borrado en cascada de entidades pertenecientes al usuario
+    db.query(models.RequestComment).filter(models.RequestComment.author_id == user.id).delete(synchronize_session=False)
+    db.query(models.AssetRequest).filter(models.AssetRequest.requester_id == user.id).delete(synchronize_session=False)
+    db.query(models.Loan).filter(models.Loan.borrower_id == user.id).delete(synchronize_session=False)
+    db.query(models.AssetAssignment).filter(models.AssetAssignment.user_id == user.id).delete(synchronize_session=False)
+
+    # Limpiar referencias donde el usuario actuó como admin o aprobador (poner en NULL)
+    db.query(models.Loan).filter(models.Loan.approver_id == user.id).update({models.Loan.approver_id: None}, synchronize_session=False)
+    db.query(models.AssetRequest).filter(models.AssetRequest.reviewed_by_id == user.id).update({models.AssetRequest.reviewed_by_id: None}, synchronize_session=False)
+    db.query(models.AssetAssignment).filter(models.AssetAssignment.authorized_by_id == user.id).update({models.AssetAssignment.authorized_by_id: None}, synchronize_session=False)
+    db.query(models.ActivityLog).filter(models.ActivityLog.actor_id == user.id).update({models.ActivityLog.actor_id: None}, synchronize_session=False)
 
     db.query(models.AuthToken).filter(models.AuthToken.user_id == user.id).delete()
     user.warehouses = []
