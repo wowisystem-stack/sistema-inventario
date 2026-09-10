@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Printer } from 'lucide-react';
+import { X, Upload, Printer, Camera } from 'lucide-react';
 import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, getAreaOptions, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 import { useWarehouses } from '../warehouseContext';
+import CameraCapture from './CameraCapture';
 
 interface AssetEditModalProps {
   asset: Asset;
@@ -31,7 +32,8 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     observations: asset.observations ?? '',
     inventory_type: asset.inventory_type,
   });
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [showFullPhoto, setShowFullPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [depreciation, setDepreciation] = useState<Depreciation | null>(null);
@@ -62,8 +64,18 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
         observations: form.observations || undefined,
         inventory_type: form.inventory_type,
       });
-      if (photoFile) {
-        saved = await uploadAssetPhoto(asset.id, photoFile);
+      if (photo) {
+        const arr = photo.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const file = new File([u8arr], `photo_${asset.id}.jpg`, { type: mime });
+        saved = await uploadAssetPhoto(asset.id, file);
       }
       onSaved(saved);
       onClose();
@@ -275,22 +287,26 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
             <textarea className="input-field" rows={3} value={form.observations} onChange={(e) => update('observations', e.target.value)} />
           </label>
 
-          <label>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Foto</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {asset.photo_url && <img src={asset.photo_url} alt={asset.description ?? asset.unique_code} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px' }} />}
-              <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
-                <Upload size={16} />
-                {photoFile ? photoFile.name : 'Subir foto'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-                />
-              </label>
+          <div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Camera size={14} /> Foto del activo
             </div>
-          </label>
+            {(photo || asset.photo_url) && (
+              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img 
+                  src={photo || asset.photo_url || ''} 
+                  alt={asset.description ?? asset.unique_code} 
+                  style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1px solid var(--surface-border)' }} 
+                  onClick={() => setShowFullPhoto(true)}
+                  title="Click para ver en grande"
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Haz click en la foto para verla completa</span>
+              </div>
+            )}
+            <div style={{ maxWidth: '280px' }}>
+              <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="4 / 3" facingMode="environment" />
+            </div>
+          </div>
 
           {asset.qr_data && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--surface-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--surface-border)' }}>
@@ -315,6 +331,26 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
           </div>
         </div>
       </form>
+      {showFullPhoto && (photo || asset.photo_url) && (
+        <div 
+          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          onClick={() => setShowFullPhoto(false)}
+        >
+          <img 
+            src={photo || asset.photo_url || ''} 
+            alt="Activo a tamaño completo" 
+            style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: '12px' }} 
+          />
+          <button 
+            type="button"
+            className="btn btn-outline" 
+            style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }}
+            onClick={(e) => { e.stopPropagation(); setShowFullPhoto(false); }}
+          >
+            <X size={28} />
+          </button>
+        </div>
+      )}
     </div>
   );
 
