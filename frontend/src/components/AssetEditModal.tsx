@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Printer, Camera } from 'lucide-react';
+import { X, Printer, Camera } from 'lucide-react';
 import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, getAreaOptions, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 import { useWarehouses } from '../warehouseContext';
 import CameraCapture from './CameraCapture';
