@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Pencil, UserPlus } from 'lucide-react';
-import { getUsers, ROLE_LABELS, type User } from '../api';
+import { Pencil, UserPlus, Trash2 } from 'lucide-react';
+import { getUsers, deleteUser, ROLE_LABELS, type User } from '../api';
 import UserEditModal from '../components/UserEditModal';
 import UserCreateModal from '../components/UserCreateModal';
 import UserProfileCard from '../components/UserProfileCard';
@@ -11,10 +11,20 @@ const Users = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     getUsers().then(setUsers).catch((err) => setError(err.message)).finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = (u: User) => {
+    if (!window.confirm(`¿Borrar a ${u.full_name}? Esta acción no se puede deshacer.`)) return;
+    setDeletingId(u.id);
+    deleteUser(u.id)
+      .then(() => setUsers((prev) => prev.filter((x) => x.id !== u.id)))
+      .catch((err) => window.alert(err.message))
+      .finally(() => setDeletingId(null));
+  };
 
   return (
     <div className="animate-fade-in">
@@ -42,9 +52,19 @@ const Users = () => {
                 user={u}
                 subtitle={`${ROLE_LABELS[u.role]} · ${u.warehouses.length ? u.warehouses.map(w => w.name).join(', ') : 'todas las bodegas'} · ${u.cargo || 'sin cargo'}`}
               />
-              <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setEditingUser(u)}>
-                <Pencil size={14} />
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setEditingUser(u)}>
+                  <Pencil size={14} />
+                </button>
+                <button
+                  className="btn btn-outline"
+                  style={{ padding: '8px', color: 'var(--danger-color)' }}
+                  disabled={deletingId === u.id}
+                  onClick={() => handleDelete(u)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

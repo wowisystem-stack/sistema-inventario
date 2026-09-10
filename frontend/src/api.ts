@@ -161,6 +161,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const detail = await res.json().catch(() => null);
     throw new Error(detail?.detail || `Error ${res.status} al llamar ${path}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -331,6 +332,9 @@ export interface UserCreateInput {
 
 export const createUser = (payload: UserCreateInput) =>
   request<User>('/users/', { method: 'POST', body: JSON.stringify(payload) });
+
+export const deleteUser = (userId: number) =>
+  request<void>(`/users/${userId}`, { method: 'DELETE' });
 
 export const getRolePermissions = () => request<RolePermission[]>('/role-permissions/');
 

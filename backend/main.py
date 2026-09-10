@@ -255,6 +255,40 @@ def update_user(
     db.refresh(user)
     return user
 
+@app.delete("/users/{user_id}", status_code=204)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user.id == _admin.id:
+        raise HTTPException(status_code=400, detail="No podés borrar tu propio usuario")
+
+    if not auth_service.is_master_admin(_admin):
+        own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
+        target_keys = {w.key for w in user.warehouses}
+        if not (own_keys & target_keys):
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    has_loans = db.query(models.Loan).filter(models.Loan.borrower_id == user.id).first() is not None
+    has_requests = db.query(models.AssetRequest).filter(models.AssetRequest.requester_id == user.id).first() is not None
+    if has_loans or has_requests:
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede borrar: este usuario tiene préstamos o solicitudes en su historial. Desactivalo en su lugar.",
+        )
+
+    db.query(models.AuthToken).filter(models.AuthToken.user_id == user.id).delete()
+    user.warehouses = []
+    db.delete(user)
+    audit.log_action(db, _admin, "user.deleted", f"{_admin.full_name} borró al usuario {user.full_name}", entity_type="user", entity_id=user_id)
+    db.commit()
+    return None
+
 @app.get("/role-permissions/", response_model=List[schemas.RolePermission])
 def get_role_permissions(db: Session = Depends(get_db)):
     return db.query(models.RolePermission).all()
