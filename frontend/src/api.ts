@@ -28,6 +28,24 @@ export type ValueSource = 'manual' | 'estimado' | 'desconocido';
 export const formatCOP = (amount: number): string =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
 
+// Áreas fijas por bodega (definidas por el negocio, no administrables por ahora).
+// Futuro Pro tiene su propia lista; el resto de las bodegas comparten esa misma
+// lista base más "Marca Personal" y "Pentágono".
+const COMMON_AREAS = [
+  'Contabilidad - Tesorería',
+  'Gestión Humana',
+  'Bodega',
+  'Comerciales',
+  'Gerencia',
+  'Tecnología',
+  'Creativos',
+  'Producción',
+];
+const NON_FUTUPRO_EXTRA_AREAS = ['Marca Personal', 'Pentágono'];
+
+export const getAreaOptions = (moduleKey: string): string[] =>
+  moduleKey === 'futupro' ? COMMON_AREAS : [...COMMON_AREAS, ...NON_FUTUPRO_EXTRA_AREAS];
+
 export const CATEGORY_LABELS: Record<Category, string> = {
   computadores: 'Computadores', celulares: 'Celulares', tablets: 'Tablets',
   camaras: 'Cámaras', microfonos: 'Micrófonos', audio: 'Audio', tripodes: 'Trípodes',

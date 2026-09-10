@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Printer } from 'lucide-react';
-import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
+import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, getAreaOptions, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 import { useWarehouses } from '../warehouseContext';
 
 interface AssetEditModalProps {
@@ -15,7 +15,11 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
   const [form, setForm] = useState({
     description: asset.description ?? '',
     brand_model: asset.brand_model ?? '',
-    status: asset.status,
+    // Si el activo estaba "pendiente de registro" (código generado en lote,
+    // todavía sin datos), completar y guardar el formulario lo pasa a
+    // disponible automáticamente -- si no, quedaba pegado en "pendiente"
+    // para siempre porque nadie tocaba el desplegable de Estado a mano.
+    status: asset.status === 'pending_registration' ? 'available' : asset.status,
     module: asset.module,
     area: asset.area ?? '',
     responsible_name: asset.responsible_name ?? '',
@@ -200,7 +204,15 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
             </label>
             <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
-              <input className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)} />
+              <select className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)}>
+                <option value="">Sin especificar</option>
+                {form.area && !getAreaOptions(form.module).includes(form.area) && (
+                  <option value={form.area}>{form.area} (valor anterior)</option>
+                )}
+                {getAreaOptions(form.module).map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
             </label>
           </div>
 

@@ -1,22 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Package } from 'lucide-react';
-import { createAsset, estimateAssetValueWithAI, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
+import { createAsset, estimateAssetValueWithAI, getAreaOptions, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import CameraCapture from '../components/CameraCapture';
-
-const COMMON_AREAS = [
-  "Contabilidad - Tesorería",
-  "Gestión Humana",
-  "Bodega",
-  "Comerciales",
-  "Gerencia",
-  "Tecnología",
-  "Creativos",
-  "Producción"
-];
-const ELITE_AREAS = ["Marca Personal", "Pentágono"];
 
 const AddAsset = () => {
   const navigate = useNavigate();
@@ -36,12 +24,17 @@ const AddAsset = () => {
     observations: '',
     inventory_type: 'activos' as InventoryType,
   });
-  
-  // Set default area based on module if empty
-  if (form.area === '') {
-    setForm(f => ({...f, area: COMMON_AREAS[0]}));
-  }
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
+
+  // Mantener el área dentro de las opciones válidas de la bodega elegida
+  // (cambia cuando cambia de bodega, y arranca con la primera por defecto).
+  useEffect(() => {
+    const options = getAreaOptions(assetModule);
+    if (!options.includes(form.area)) {
+      setForm((f) => ({ ...f, area: options[0] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetModule]);
   const [photo, setPhoto] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [estimating, setEstimating] = useState(false);
@@ -256,9 +249,7 @@ const AddAsset = () => {
               value={form.area} 
               onChange={(e) => update('area', e.target.value)}
             >
-              <option value="" disabled>Seleccione un área...</option>
-              {COMMON_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
-              {assetModule.toLowerCase().includes('elite') && ELITE_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+              {getAreaOptions(assetModule).map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
         </div>
