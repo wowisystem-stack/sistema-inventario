@@ -98,7 +98,7 @@ const AddAsset = () => {
     const isFutu = createdAsset.module.toLowerCase().includes('futu');
     const logoSrc = isFutu
       ? `${window.location.origin}/logo_futupro.png`
-      : `${window.location.origin}/logo_elite_nova_icon.png`;
+      : `${window.location.origin}/logo_elite_nutrition.jpeg`;
     const accent = isFutu ? '#b8960c' : '#1e3a6e';
 
     const printWindow = window.open('', '', 'width=400,height=160');

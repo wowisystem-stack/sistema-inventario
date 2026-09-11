@@ -9,7 +9,7 @@ const suggestPrefix = (key: string): string => key.replace(/[^a-zA-Z]/g, "").sli
 const getLogoUrl = (moduleKey: string): string => {
   const key = moduleKey.toLowerCase();
   if (key.includes("futu")) return "/logo_futupro.png";
-  return "/logo_elite_nova_icon.png";
+  return "/logo_elite_nutrition.jpeg";
 };
 
 const getAccentColor = (moduleKey: string): string => {
